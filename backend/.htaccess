@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Defense in depth: never serve .env directly, even if something else changes.
+    RewriteRule ^\.env$ - [F,L]
+
+    # This host's document root is the Laravel project root (not public/),
+    # since there's no per-subdomain "document root" setting available in
+    # hPanel on this plan. Transparently route everything through public/,
+    # whose own .htaccess (shipped by Laravel) then dispatches to index.php.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

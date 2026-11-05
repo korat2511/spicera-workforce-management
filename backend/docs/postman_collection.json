@@ -1,0 +1,128 @@
+{
+  "info": {
+    "name": "Spicera Workforce API — Phase 1 (Staff Management)",
+    "description": "Staff Management endpoints. No authentication yet — Phase 2 will add Sanctum tokens.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000/api", "type": "string" },
+    { "key": "staff_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "Get staff list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/v1/staff?search=&status=&employment_type=&page=1&per_page=15",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "staff"],
+          "query": [
+            { "key": "search", "value": "" },
+            { "key": "status", "value": "" },
+            { "key": "employment_type", "value": "" },
+            { "key": "page", "value": "1" },
+            { "key": "per_page", "value": "15" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get staff details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/v1/staff/{{staff_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "staff", "{{staff_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Create staff",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Smith\",\n  \"email\": \"john.smith@example.com\",\n  \"phone\": \"0412345678\",\n  \"date_of_birth\": \"1995-04-12\",\n  \"street_address\": \"12 Example St\",\n  \"suburb\": \"Parramatta\",\n  \"state\": \"NSW\",\n  \"postcode\": \"2150\",\n  \"employment_type\": \"Full-time\",\n  \"job_title\": \"Chef\",\n  \"joining_date\": \"2026-01-10\",\n  \"salary_type\": \"Hourly\",\n  \"salary_rate\": 28.50,\n  \"notes\": null\n}"
+        },
+        "url": { "raw": "{{base_url}}/v1/staff", "host": ["{{base_url}}"], "path": ["v1", "staff"] }
+      },
+      "response": [
+        {
+          "name": "201 Created",
+          "originalRequest": { "method": "POST", "url": { "raw": "{{base_url}}/v1/staff" } },
+          "status": "Created",
+          "code": 201,
+          "body": "{\n  \"success\": true,\n  \"message\": \"Staff created successfully\",\n  \"data\": {\n    \"id\": 101,\n    \"staff_code\": \"JK001\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Smith\",\n    \"salary_type\": \"Hourly\",\n    \"salary_rate\": \"28.50\",\n    \"currency\": \"AUD\",\n    \"status\": \"active\"\n  }\n}"
+        },
+        {
+          "name": "422 Validation failed",
+          "originalRequest": { "method": "POST", "url": { "raw": "{{base_url}}/v1/staff" } },
+          "status": "Unprocessable Content",
+          "code": 422,
+          "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"phone\": [\"The phone must be a valid Australian phone number.\"]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Update staff (PUT — full replace)",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Smith\",\n  \"phone\": \"0412345678\",\n  \"employment_type\": \"Full-time\",\n  \"joining_date\": \"2026-01-10\",\n  \"salary_type\": \"Hourly\",\n  \"salary_rate\": 30.00\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/staff/{{staff_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "staff", "{{staff_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Update staff (PATCH — partial)",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job_title\": \"Head Chef\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/staff/{{staff_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "staff", "{{staff_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Change staff status",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"inactive\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/staff/{{staff_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "staff", "{{staff_id}}", "status"]
+        }
+      }
+    }
+  ]
+}

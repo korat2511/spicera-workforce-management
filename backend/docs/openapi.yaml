@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: Spicera Workforce API
+  description: >
+    Phase 1 — Staff Management APIs for the Spicera Workforce backend
+    (JK Dhosa House). No authentication yet (Phase 2); all endpoints
+    currently operate against the single seeded business.
+  version: "1.0.0"
+servers:
+  - url: http://127.0.0.1:8000/api
+    description: Local development
+  - url: https://spicera-workforce.velocoresolutions.com/api
+    description: Production (Hostinger)
+
+tags:
+  - name: Staff
+    description: Staff Management (Phase 1)
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Staff]
+      responses:
+        "200":
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  message: { type: string }
+                  timestamp: { type: string, format: date-time }
+
+  /v1/staff:
+    get:
+      summary: Get staff list
+      tags: [Staff]
+      parameters:
+        - name: search
+          in: query
+          description: Search by staff name, staff code or phone number.
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, inactive] }
+        - name: employment_type
+          in: query
+          schema: { type: string, enum: [Full-time, Part-time, Casual, Other] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 15, maximum: 100 }
+      responses:
+        "200":
+          description: Paginated staff list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffListResponse"
+    post:
+      summary: Create staff
+      tags: [Staff]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffWriteRequest"
+      responses:
+        "201":
+          description: Staff created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /v1/staff/{id}:
+    get:
+      summary: Get staff details
+      tags: [Staff]
+      parameters:
+        - $ref: "#/components/parameters/StaffId"
+      responses:
+        "200":
+          description: Staff details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "404":
+          description: Staff not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update staff (full replace — core fields required)
+      tags: [Staff]
+      parameters:
+        - $ref: "#/components/parameters/StaffId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffWriteRequest"
+      responses:
+        "200":
+          description: Staff updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+    patch:
+      summary: Update staff (partial update)
+      tags: [Staff]
+      parameters:
+        - $ref: "#/components/parameters/StaffId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffPartialWriteRequest"
+      responses:
+        "200":
+          description: Staff updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /v1/staff/{id}/status:
+    patch:
+      summary: Activate or deactivate a staff member
+      tags: [Staff]
+      parameters:
+        - $ref: "#/components/parameters/StaffId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, inactive] }
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+components:
+  parameters:
+    StaffId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  schemas:
+    Staff:
+      type: object
+      properties:
+        id: { type: integer, example: 101 }
+        staff_code: { type: string, example: JK001 }
+        first_name: { type: string, example: John }
+        last_name: { type: string, example: Smith }
+        full_name: { type: string, example: John Smith }
+        email: { type: string, nullable: true, example: null }
+        phone: { type: string, example: "0412345678" }
+        date_of_birth: { type: string, format: date, nullable: true }
+        gender: { type: string, nullable: true }
+        street_address: { type: string, nullable: true }
+        suburb: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        postcode: { type: string, nullable: true }
+        employment_type: { type: string, enum: [Full-time, Part-time, Casual, Other] }
+        job_title: { type: string, nullable: true }
+        joining_date: { type: string, format: date }
+        salary_type: { type: string, enum: [Monthly, Daily, Hourly] }
+        salary_rate: { type: string, example: "28.50" }
+        currency: { type: string, example: AUD }
+        status: { type: string, enum: [active, inactive] }
+        profile_photo: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    StaffWriteRequest:
+      type: object
+      required: [first_name, last_name, phone, employment_type, joining_date, salary_type, salary_rate]
+      properties:
+        staff_code: { type: string, nullable: true, description: "Auto-generated if omitted" }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, example: "0412345678" }
+        date_of_birth: { type: string, format: date, nullable: true }
+        street_address: { type: string, nullable: true }
+        suburb: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        postcode: { type: string, nullable: true }
+        employment_type: { type: string, enum: [Full-time, Part-time, Casual, Other] }
+        job_title: { type: string, nullable: true }
+        joining_date: { type: string, format: date }
+        salary_type: { type: string, enum: [Monthly, Daily, Hourly] }
+        salary_rate: { type: number, format: float, example: 28.50 }
+        notes: { type: string, nullable: true }
+        profile_photo: { type: string, format: binary, nullable: true }
+
+    StaffPartialWriteRequest:
+      allOf:
+        - $ref: "#/components/schemas/StaffWriteRequest"
+      description: Every field is optional for PATCH — only submitted fields are changed.
+
+    StaffResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: Staff created successfully }
+        data:
+          $ref: "#/components/schemas/Staff"
+
+    StaffListResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            staff:
+              type: array
+              items:
+                $ref: "#/components/schemas/Staff"
+            pagination:
+              type: object
+              properties:
+                current_page: { type: integer, example: 1 }
+                per_page: { type: integer, example: 15 }
+                total: { type: integer, example: 42 }
+                last_page: { type: integer, example: 3 }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string, example: Resource not found }
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string, example: Validation failed }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+          example:
+            phone: ["The phone must be a valid Australian phone number."]

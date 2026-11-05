@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * @property \App\Models\Staff $resource
+ */
+class StaffResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'staff_code' => $this->staff_code,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'full_name' => $this->full_name,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'date_of_birth' => $this->date_of_birth?->toDateString(),
+            'gender' => $this->gender,
+            'street_address' => $this->street_address,
+            'suburb' => $this->suburb,
+            'state' => $this->state,
+            'postcode' => $this->postcode,
+            'employment_type' => $this->employment_type,
+            'job_title' => $this->job_title,
+            'joining_date' => $this->joining_date?->toDateString(),
+            'salary_type' => $this->salary_type,
+            'salary_rate' => (string) $this->salary_rate,
+            'currency' => $this->business?->currency,
+            'status' => $this->status,
+            'profile_photo' => $this->profile_photo ? Storage::url($this->profile_photo) : null,
+            'notes' => $this->notes,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+    }
+}
