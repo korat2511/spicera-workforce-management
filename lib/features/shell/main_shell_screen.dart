@@ -4,6 +4,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../shared_widgets/app_bottom_nav_bar.dart';
 import '../../shared_widgets/common_app_bar.dart';
+import '../more/more_screen.dart';
+import '../shifts/shifts_screen.dart';
 import '../staff/staff_screen.dart';
 
 class MainShellScreen extends StatefulWidget {
@@ -34,14 +36,17 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
     return Scaffold(
       appBar: const CommonAppBar(),
-      body: selected.label == 'Staff'
-          ? const StaffScreen()
-          : Center(
-              child: Text(
-                '${selected.label} screen',
-                style: AppTypography.headlineMd(color: AppColors.textSecondary),
-              ),
-            ),
+      body: switch (selected.label) {
+        'Staff' => const StaffScreen(),
+        'Shifts' => const ShiftsScreen(),
+        'More' => const MoreScreen(),
+        _ => Center(
+          child: Text(
+            '${selected.label} screen',
+            style: AppTypography.headlineMd(color: AppColors.textSecondary),
+          ),
+        ),
+      },
       bottomNavigationBar: AppBottomNavBar(
         items: _items,
         currentIndex: _selectedIndex,

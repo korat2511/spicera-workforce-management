@@ -1,12 +1,25 @@
 {
   "info": {
-    "name": "Spicera Workforce API — Phase 1 (Staff Management)",
-    "description": "Staff Management endpoints. No authentication yet — Phase 2 will add Sanctum tokens.",
+    "name": "Spicera Workforce API \u2014 Phase 1 (Staff Management)",
+    "description": "Staff Management endpoints. No authentication yet \u2014 Phase 2 will add Sanctum tokens.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:8000/api", "type": "string" },
-    { "key": "staff_id", "value": "1", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "staff_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "shift_id",
+      "value": "1",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -14,7 +27,15 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
       }
     },
     {
@@ -24,14 +45,34 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/v1/staff?search=&status=&employment_type=&page=1&per_page=15",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "staff"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff"
+          ],
           "query": [
-            { "key": "search", "value": "" },
-            { "key": "status", "value": "" },
-            { "key": "employment_type", "value": "" },
-            { "key": "page", "value": "1" },
-            { "key": "per_page", "value": "15" }
+            {
+              "key": "search",
+              "value": ""
+            },
+            {
+              "key": "status",
+              "value": ""
+            },
+            {
+              "key": "employment_type",
+              "value": ""
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "per_page",
+              "value": "15"
+            }
           ]
         }
       }
@@ -43,8 +84,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/v1/staff/{{staff_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "staff", "{{staff_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff",
+            "{{staff_id}}"
+          ]
         }
       }
     },
@@ -52,24 +99,48 @@
       "name": "Create staff",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Smith\",\n  \"email\": \"john.smith@example.com\",\n  \"phone\": \"0412345678\",\n  \"date_of_birth\": \"1995-04-12\",\n  \"street_address\": \"12 Example St\",\n  \"suburb\": \"Parramatta\",\n  \"state\": \"NSW\",\n  \"postcode\": \"2150\",\n  \"employment_type\": \"Full-time\",\n  \"job_title\": \"Chef\",\n  \"joining_date\": \"2026-01-10\",\n  \"salary_type\": \"Hourly\",\n  \"salary_rate\": 28.50,\n  \"notes\": null\n}"
         },
-        "url": { "raw": "{{base_url}}/v1/staff", "host": ["{{base_url}}"], "path": ["v1", "staff"] }
+        "url": {
+          "raw": "{{base_url}}/v1/staff",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff"
+          ]
+        }
       },
       "response": [
         {
           "name": "201 Created",
-          "originalRequest": { "method": "POST", "url": { "raw": "{{base_url}}/v1/staff" } },
+          "originalRequest": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/v1/staff"
+            }
+          },
           "status": "Created",
           "code": 201,
           "body": "{\n  \"success\": true,\n  \"message\": \"Staff created successfully\",\n  \"data\": {\n    \"id\": 101,\n    \"staff_code\": \"JK001\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Smith\",\n    \"salary_type\": \"Hourly\",\n    \"salary_rate\": \"28.50\",\n    \"currency\": \"AUD\",\n    \"status\": \"active\"\n  }\n}"
         },
         {
           "name": "422 Validation failed",
-          "originalRequest": { "method": "POST", "url": { "raw": "{{base_url}}/v1/staff" } },
+          "originalRequest": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/v1/staff"
+            }
+          },
           "status": "Unprocessable Content",
           "code": 422,
           "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"phone\": [\"The phone must be a valid Australian phone number.\"]\n  }\n}"
@@ -77,34 +148,56 @@
       ]
     },
     {
-      "name": "Update staff (PUT — full replace)",
+      "name": "Update staff (PUT \u2014 full replace)",
       "request": {
         "method": "PUT",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Smith\",\n  \"phone\": \"0412345678\",\n  \"employment_type\": \"Full-time\",\n  \"joining_date\": \"2026-01-10\",\n  \"salary_type\": \"Hourly\",\n  \"salary_rate\": 30.00\n}"
         },
         "url": {
           "raw": "{{base_url}}/v1/staff/{{staff_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "staff", "{{staff_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff",
+            "{{staff_id}}"
+          ]
         }
       }
     },
     {
-      "name": "Update staff (PATCH — partial)",
+      "name": "Update staff (PATCH \u2014 partial)",
       "request": {
         "method": "PATCH",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"job_title\": \"Head Chef\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/v1/staff/{{staff_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "staff", "{{staff_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff",
+            "{{staff_id}}"
+          ]
         }
       }
     },
@@ -112,15 +205,245 @@
       "name": "Change staff status",
       "request": {
         "method": "PATCH",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"status\": \"inactive\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/v1/staff/{{staff_id}}/status",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "staff", "{{staff_id}}", "status"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff",
+            "{{staff_id}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Set staff PIN",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pin\": \"123456\",\n  \"pin_confirmation\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/staff/{{staff_id}}/pin",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff",
+            "{{staff_id}}",
+            "pin"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "422 PIN mismatch",
+          "originalRequest": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/v1/staff/{{staff_id}}/pin"
+            }
+          },
+          "status": "Unprocessable Content",
+          "code": 422,
+          "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"pin\": [\"The pin field confirmation does not match.\"]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Assign staff shift",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"shift_id\": 1\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/staff/{{staff_id}}/shift",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "staff",
+            "{{staff_id}}",
+            "shift"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get shift list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/v1/shifts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "shifts"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/v1/shifts"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"success\": true,\n  \"message\": \"Shifts retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Morning Shift\",\n      \"shift_type\": \"REGULAR\",\n      \"description\": \"Breakfast & lunch rush operations\",\n      \"start_time\": \"08:00\",\n      \"end_time\": \"16:00\",\n      \"duration_hours\": 8.0,\n      \"status\": \"active\",\n      \"break_duration_minutes\": 15,\n      \"grace_period_minutes\": 10,\n      \"scheduled_days\": [\n        \"Mon\",\n        \"Tue\",\n        \"Wed\",\n        \"Thu\",\n        \"Fri\",\n        \"Sat\",\n        \"Sun\"\n      ],\n      \"staff_count\": 6,\n      \"assigned_staff\": [\n        {\n          \"id\": 101,\n          \"full_name\": \"John Smith\"\n        }\n      ]\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get shift details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/v1/shifts/{{shift_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "shifts",
+            "{{shift_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create shift",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Afternoon Shift\",\n  \"shift_type\": \"SNACKS & PREP\",\n  \"description\": \"Mid-day interval slot\",\n  \"start_time\": \"14:00\",\n  \"end_time\": \"18:00\",\n  \"status\": \"active\",\n  \"break_duration_minutes\": 15,\n  \"grace_period_minutes\": 5,\n  \"scheduled_days\": [\n    1,\n    2,\n    3,\n    4,\n    5,\n    6\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/shifts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "shifts"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update shift (PATCH \u2014 partial)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated Afternoon Shift\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/shifts/{{shift_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "shifts",
+            "{{shift_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Change shift status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"inactive\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/shifts/{{shift_id}}/status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "shifts",
+            "{{shift_id}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Delete shift",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/v1/shifts/{{shift_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "shifts",
+            "{{shift_id}}"
+          ]
         }
       }
     }

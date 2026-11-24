@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssignStaffShiftRequest;
 use App\Http\Requests\ChangeStaffStatusRequest;
+use App\Http\Requests\SetStaffPinRequest;
 use App\Http\Requests\StoreStaffRequest;
 use App\Http\Requests\UpdateStaffRequest;
 use App\Http\Resources\StaffResource;
@@ -63,5 +65,23 @@ class StaffController extends Controller
         $staff = $this->staffService->changeStatus($staff, $request->validated('status'));
 
         return ApiResponse::success(new StaffResource($staff), 'Staff status updated successfully');
+    }
+
+    public function setPin(SetStaffPinRequest $request, int $id): JsonResponse
+    {
+        $business = BusinessContext::resolve();
+        $staff = $this->staffService->find($business, $id);
+        $staff = $this->staffService->setPin($staff, $request->validated('pin'));
+
+        return ApiResponse::success(new StaffResource($staff), 'Staff PIN set successfully');
+    }
+
+    public function assignShift(AssignStaffShiftRequest $request, int $id): JsonResponse
+    {
+        $business = BusinessContext::resolve();
+        $staff = $this->staffService->find($business, $id);
+        $staff = $this->staffService->assignShift($staff, $request->validated('shift_id'));
+
+        return ApiResponse::success(new StaffResource($staff), 'Shift assigned successfully');
     }
 }

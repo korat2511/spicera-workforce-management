@@ -15,6 +15,8 @@ servers:
 tags:
   - name: Staff
     description: Staff Management (Phase 1)
+  - name: Shifts
+    description: Shift reference data used for staff assignment
 
 paths:
   /health:
@@ -181,9 +183,217 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationErrorResponse"
 
+  /v1/staff/{id}/pin:
+    patch:
+      summary: Set or change a staff member's attendance PIN
+      description: >
+        Stores the PIN as a hash (never plain text, never returned in any
+        response). `pin_confirmation` must match `pin`.
+      tags: [Staff]
+      parameters:
+        - $ref: "#/components/parameters/StaffId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin, pin_confirmation]
+              properties:
+                pin: { type: string, example: "123456", description: "Exactly 6 digits" }
+                pin_confirmation: { type: string, example: "123456" }
+      responses:
+        "200":
+          description: PIN set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "422":
+          description: Validation failed (wrong length or confirmation mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /v1/staff/{id}/shift:
+    patch:
+      summary: Assign or unassign a shift for a staff member
+      description: Pass `shift_id: null` to unassign the staff member from their current shift.
+      tags: [Staff]
+      parameters:
+        - $ref: "#/components/parameters/StaffId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shift_id: { type: integer, nullable: true, example: 1 }
+      responses:
+        "200":
+          description: Shift assigned/unassigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+        "422":
+          description: Validation failed (unknown shift, or shift belongs to another business)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /v1/shifts:
+    get:
+      summary: List shift templates for the current business
+      tags: [Shifts]
+      parameters:
+        - name: search
+          in: query
+          description: Search by shift name.
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, inactive] }
+      responses:
+        "200":
+          description: Shift list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Shift"
+    post:
+      summary: Create a shift template
+      tags: [Shifts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShiftWriteRequest"
+      responses:
+        "201":
+          description: Shift created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /v1/shifts/{id}:
+    get:
+      summary: Get shift details
+      tags: [Shifts]
+      parameters:
+        - $ref: "#/components/parameters/ShiftId"
+      responses:
+        "200":
+          description: Shift details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftResponse"
+        "404":
+          description: Shift not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a shift template (partial update)
+      tags: [Shifts]
+      parameters:
+        - $ref: "#/components/parameters/ShiftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShiftWriteRequest"
+      responses:
+        "200":
+          description: Shift updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+    delete:
+      summary: Delete a shift template
+      description: Blocked with a 422 while any staff are still assigned to this shift.
+      tags: [Shifts]
+      parameters:
+        - $ref: "#/components/parameters/ShiftId"
+      responses:
+        "200":
+          description: Shift deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Staff still assigned to this shift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /v1/shifts/{id}/status:
+    patch:
+      summary: Activate or deactivate a shift template
+      tags: [Shifts]
+      parameters:
+        - $ref: "#/components/parameters/ShiftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, inactive] }
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftResponse"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
 components:
   parameters:
     StaffId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    ShiftId:
       name: id
       in: path
       required: true
@@ -215,8 +425,67 @@ components:
         status: { type: string, enum: [active, inactive] }
         profile_photo: { type: string, nullable: true }
         notes: { type: string, nullable: true }
+        pin_set: { type: boolean, example: false, description: "Whether an attendance PIN has been set" }
+        shift:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Shift"
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+
+    Shift:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: Morning Shift }
+        shift_type: { type: string, nullable: true, example: REGULAR }
+        description: { type: string, nullable: true, example: Breakfast & lunch rush operations }
+        start_time: { type: string, example: "08:00" }
+        end_time: { type: string, example: "16:00" }
+        duration_hours: { type: number, format: float, example: 8.0 }
+        status: { type: string, enum: [active, inactive] }
+        break_duration_minutes: { type: integer, example: 15 }
+        grace_period_minutes: { type: integer, example: 10 }
+        scheduled_days:
+          type: array
+          items: { type: string, enum: [Mon, Tue, Wed, Thu, Fri, Sat, Sun] }
+          example: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        staff_count: { type: integer, example: 6 }
+        assigned_staff:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer, example: 101 }
+              full_name: { type: string, example: John Smith }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ShiftWriteRequest:
+      type: object
+      required: [name, start_time, end_time, scheduled_days]
+      properties:
+        name: { type: string, example: Afternoon Shift }
+        shift_type: { type: string, nullable: true, example: "SNACKS & PREP" }
+        description: { type: string, nullable: true, example: Mid-day interval slot }
+        start_time: { type: string, example: "14:00" }
+        end_time: { type: string, example: "18:00" }
+        status: { type: string, enum: [active, inactive], default: active }
+        break_duration_minutes: { type: integer, default: 15 }
+        grace_period_minutes: { type: integer, default: 10 }
+        scheduled_days:
+          type: array
+          description: ISO weekday numbers, Monday = 1 ... Sunday = 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+          example: [1, 2, 3, 4, 5, 6]
+
+    ShiftResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: Shift created successfully }
+        data:
+          $ref: "#/components/schemas/Shift"
 
     StaffWriteRequest:
       type: object

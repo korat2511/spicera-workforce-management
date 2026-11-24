@@ -34,6 +34,11 @@ class Staff extends Model
         'status',
         'profile_photo',
         'notes',
+        'shift_id',
+    ];
+
+    protected $hidden = [
+        'pin_hash',
     ];
 
     /**
@@ -51,6 +56,11 @@ class Staff extends Model
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class);
     }
 
     protected function fullName(): Attribute

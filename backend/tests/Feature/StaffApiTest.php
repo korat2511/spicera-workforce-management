@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Business;
+use App\Models\Shift;
 use App\Models\Staff;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class StaffApiTest extends TestCase
@@ -200,6 +202,91 @@ class StaffApiTest extends TestCase
         $this->patchJson("/api/v1/staff/{$staff->id}/status", ['status' => 'retired'])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['status']);
+    }
+
+    public function test_it_sets_a_staff_pin(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.pin_set', true)
+            ->assertJsonMissingPath('data.pin_hash')
+            ->assertJsonMissingPath('data.pin');
+
+        $this->assertTrue(Hash::check('123456', $staff->fresh()->pin_hash));
+    }
+
+    public function test_it_rejects_a_pin_confirmation_mismatch(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '123456',
+            'pin_confirmation' => '654321',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['pin']);
+    }
+
+    public function test_it_rejects_a_pin_that_is_not_six_digits(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '12',
+            'pin_confirmation' => '12',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['pin']);
+    }
+
+    public function test_it_assigns_a_shift_to_staff(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+        $shift = Shift::factory()->for($this->business)->create(['name' => 'Morning Shift']);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/shift", ['shift_id' => $shift->id])
+            ->assertOk()
+            ->assertJsonPath('data.shift.id', $shift->id)
+            ->assertJsonPath('data.shift.name', 'Morning Shift');
+
+        $this->assertDatabaseHas('staff', ['id' => $staff->id, 'shift_id' => $shift->id]);
+    }
+
+    public function test_it_unassigns_a_shift_from_staff(): void
+    {
+        $shift = Shift::factory()->for($this->business)->create();
+        $staff = Staff::factory()->for($this->business)->create(['shift_id' => $shift->id]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/shift", ['shift_id' => null])
+            ->assertOk()
+            ->assertJsonPath('data.shift', null);
+
+        $this->assertDatabaseHas('staff', ['id' => $staff->id, 'shift_id' => null]);
+    }
+
+    public function test_it_rejects_an_unknown_shift_id(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/shift", ['shift_id' => 999999])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['shift_id']);
+    }
+
+    public function test_it_rejects_a_shift_belonging_to_another_business(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+        $otherBusiness = Business::factory()->create();
+        $otherShift = Shift::factory()->for($otherBusiness)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/shift", ['shift_id' => $otherShift->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['shift_id']);
     }
 
     public function test_staff_from_another_business_never_leaks_into_results(): void

@@ -7,10 +7,15 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/utils/image_utils.dart';
 import '../../core/utils/navigation_utils.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/utils/snackbar_utils.dart';
+import '../../shared_widgets/app_section_card.dart';
+import '../../shared_widgets/app_segmented_control.dart';
+import 'data/staff_api_service.dart';
+import 'staff_pin_shift_screen.dart';
 
 class CreateStaffScreen extends StatefulWidget {
   const CreateStaffScreen({super.key});
@@ -26,6 +31,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
   static const _states = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
   final _formKey = GlobalKey<FormState>();
+  final _staffApiService = const StaffApiService();
 
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -127,6 +133,19 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
+  String? _validateFullName(String? value) {
+    final parts = (value ?? '').trim().split(RegExp(r'\s+'));
+    if (parts.where((p) => p.isNotEmpty).length < 2) {
+      return 'Enter both first and last name';
+    }
+    return null;
+  }
+
+  (String, String) _splitFullName() {
+    final parts = _fullNameController.text.trim().split(RegExp(r'\s+'));
+    return (parts.first, parts.skip(1).join(' '));
+  }
+
   String? _validateAustralianPhone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Phone number is required';
@@ -157,7 +176,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
     return null;
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -166,15 +185,56 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
 
     setState(() => _isSaving = true);
 
-    // No backend wiring yet — the create-staff API call lands when the
-    // app's networking layer is built. This confirms the form is valid
-    // and gives save/loading feedback in the meantime.
-    Future.delayed(const Duration(milliseconds: 600), () {
+    final (firstName, lastName) = _splitFullName();
+    final phoneDigits = _phoneController.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    try {
+      final created = await _staffApiService.createStaff(
+        firstName: firstName,
+        lastName: lastName,
+        phone: '+61$phoneDigits',
+        employmentType: _employmentType,
+        joiningDate: _joiningDate,
+        salaryType: _salaryType,
+        salaryRate: double.parse(_salaryRateController.text.trim()),
+        email: _emailController.text.trim(),
+        dateOfBirth: _dateOfBirth,
+        gender: _gender,
+        streetAddress: _streetAddressController.text.trim(),
+        suburb: _suburbController.text.trim(),
+        state: _state,
+        postcode: _postcodeController.text.trim(),
+        jobTitle: _jobTitleController.text.trim(),
+        notes: _notesController.text.trim(),
+        profilePhoto: _profilePhoto,
+      );
+
       if (!mounted) return;
       setState(() => _isSaving = false);
-      SnackbarUtils.showSuccess(context, 'Staff profile ready to save');
-      NavigationUtils.pop(null, context);
-    });
+      SnackbarUtils.showSuccess(
+        context,
+        '${created.fullName} added (${created.staffCode})',
+      );
+      NavigationUtils.push(
+        StaffPinShiftScreen(staff: created),
+        context: context,
+      );
+    } on ApiValidationException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      SnackbarUtils.showError(context, e.firstMessage);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      SnackbarUtils.showError(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      SnackbarUtils.showError(
+        context,
+        'Something went wrong. Please try again.',
+      );
+    }
   }
 
   @override
@@ -189,7 +249,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
               ResponsiveUtils.screenPadding(context) +
               const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           children: [
-            _SectionCard(
+            AppSectionCard(
               letter: 'A',
               title: 'Personal Details',
               subtitle: 'Identity & contact',
@@ -202,9 +262,8 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                   field: TextFormField(
                     controller: _fullNameController,
                     textCapitalization: TextCapitalization.words,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Full name is required'
-                        : null,
+                    autocorrect: false,
+                    validator: _validateFullName,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -215,6 +274,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     field: TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
+                      autocorrect: false,
                       validator: _validateAustralianPhone,
                       decoration: const InputDecoration(
                         prefixText: '+61 ',
@@ -227,6 +287,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     field: TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
                       validator: _validateEmail,
                     ),
                   ),
@@ -259,7 +320,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            _SectionCard(
+            AppSectionCard(
               letter: 'B',
               title: 'Employment Details',
               subtitle: 'Role & address',
@@ -267,7 +328,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                 _labeledField(
                   label: 'Employment Type',
                   required: true,
-                  field: _SegmentedControl(
+                  field: AppSegmentedControl(
                     options: _employmentTypes,
                     value: _employmentType,
                     onChanged: (v) => setState(() => _employmentType = v),
@@ -277,7 +338,10 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                 _fieldRow(context, [
                   _labeledField(
                     label: 'Job Title',
-                    field: TextFormField(controller: _jobTitleController),
+                    field: TextFormField(
+                      controller: _jobTitleController,
+                      autocorrect: false,
+                    ),
                   ),
                   _labeledField(
                     label: 'Joining Date',
@@ -296,13 +360,19 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                 const SizedBox(height: AppSpacing.md),
                 _labeledField(
                   label: 'Street Address',
-                  field: TextFormField(controller: _streetAddressController),
+                  field: TextFormField(
+                    controller: _streetAddressController,
+                    autocorrect: false,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _fieldRow(context, [
                   _labeledField(
                     label: 'Suburb',
-                    field: TextFormField(controller: _suburbController),
+                    field: TextFormField(
+                      controller: _suburbController,
+                      autocorrect: false,
+                    ),
                   ),
                   _labeledField(
                     label: 'State',
@@ -321,13 +391,14 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     field: TextFormField(
                       controller: _postcodeController,
                       keyboardType: TextInputType.number,
+                      autocorrect: false,
                     ),
                   ),
                 ]),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            _SectionCard(
+            AppSectionCard(
               letter: 'C',
               title: 'Compensation Details',
               subtitle: 'Payroll & wages',
@@ -335,7 +406,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                 _labeledField(
                   label: 'Salary Calculation Method',
                   required: true,
-                  field: _SegmentedControl(
+                  field: AppSegmentedControl(
                     options: _salaryTypes,
                     value: _salaryType,
                     onChanged: (v) => setState(() => _salaryType = v),
@@ -351,6 +422,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
+                    autocorrect: false,
                     validator: _validateSalaryRate,
                     decoration: const InputDecoration(prefixText: '\$ '),
                   ),
@@ -368,7 +440,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            _SectionCard(
+            AppSectionCard(
               letter: 'D',
               title: 'Notes',
               subtitle: 'Optional',
@@ -376,6 +448,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                 TextFormField(
                   controller: _notesController,
                   maxLines: 3,
+                  autocorrect: false,
                   decoration: const InputDecoration(
                     hintText:
                         'Anything else worth noting about this staff member',
@@ -644,124 +717,6 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
           if (i != children.length - 1) const SizedBox(width: AppSpacing.md),
         ],
       ],
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.letter,
-    required this.title,
-    required this.subtitle,
-    required this.children,
-  });
-
-  final String letter;
-  final String title;
-  final String subtitle;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppRadius.base),
-                ),
-                child: Text(
-                  letter,
-                  style: AppTypography.labelMd(color: AppColors.onPrimary),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.headlineSm(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: AppTypography.bodyMd(color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentedControl extends StatelessWidget {
-  const _SegmentedControl({
-    required this.options,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final List<String> options;
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < options.length; i++) ...[
-          Expanded(child: _segment(options[i])),
-          if (i != options.length - 1) const SizedBox(width: AppSpacing.xs),
-        ],
-      ],
-    );
-  }
-
-  Widget _segment(String option) {
-    final selected = option == value;
-    return GestureDetector(
-      onTap: () => onChanged(option),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surfaceInput,
-          borderRadius: BorderRadius.circular(AppRadius.base),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-          ),
-        ),
-        child: Text(
-          option,
-          textAlign: TextAlign.center,
-          style: AppTypography.labelLg(
-            color: selected ? AppColors.onPrimary : AppColors.textSecondary,
-          ),
-        ),
-      ),
     );
   }
 }

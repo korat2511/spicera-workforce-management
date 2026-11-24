@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\Staff;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class StaffService
 {
@@ -14,7 +15,7 @@ class StaffService
      */
     public function list(Business $business, array $filters): LengthAwarePaginator
     {
-        $query = Staff::query()->with('business')->where('business_id', $business->id);
+        $query = Staff::query()->with(['business', 'shift'])->where('business_id', $business->id);
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
@@ -41,7 +42,7 @@ class StaffService
 
     public function find(Business $business, int $id): Staff
     {
-        return Staff::with('business')->where('business_id', $business->id)->findOrFail($id);
+        return Staff::with(['business', 'shift'])->where('business_id', $business->id)->findOrFail($id);
     }
 
     /**
@@ -55,7 +56,7 @@ class StaffService
             $data['status'] = 'active';
             $data['staff_code'] = $data['staff_code'] ?? $this->generateStaffCode($business);
 
-            return Staff::create($data)->load('business');
+            return Staff::create($data)->load(['business', 'shift']);
         });
     }
 
@@ -70,14 +71,29 @@ class StaffService
 
         $staff->fill($data)->save();
 
-        return $staff->fresh('business');
+        return $staff->fresh(['business', 'shift']);
     }
 
     public function changeStatus(Staff $staff, string $status): Staff
     {
         $staff->update(['status' => $status]);
 
-        return $staff->fresh('business');
+        return $staff->fresh(['business', 'shift']);
+    }
+
+    public function setPin(Staff $staff, string $pin): Staff
+    {
+        $staff->pin_hash = Hash::make($pin);
+        $staff->save();
+
+        return $staff->fresh(['business', 'shift']);
+    }
+
+    public function assignShift(Staff $staff, ?int $shiftId): Staff
+    {
+        $staff->update(['shift_id' => $shiftId]);
+
+        return $staff->fresh(['business', 'shift']);
     }
 
     public function generateStaffCode(Business $business): string

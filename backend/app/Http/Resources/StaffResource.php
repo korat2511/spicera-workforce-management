@@ -41,6 +41,8 @@ class StaffResource extends JsonResource
             'status' => $this->status,
             'profile_photo' => $this->profile_photo ? Storage::url($this->profile_photo) : null,
             'notes' => $this->notes,
+            'pin_set' => $this->pin_hash !== null,
+            'shift' => $this->whenLoaded('shift', fn () => $this->shift ? new ShiftResource($this->shift) : null),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

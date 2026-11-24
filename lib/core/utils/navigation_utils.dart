@@ -43,4 +43,8 @@ class NavigationUtils {
   static bool canPop({BuildContext? context}) {
     return Navigator.of(context ?? _context).canPop();
   }
+
+  static void popToRoot({BuildContext? context}) {
+    Navigator.of(context ?? _context).popUntil((route) => route.isFirst);
+  }
 }
