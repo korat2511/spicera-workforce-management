@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Middleware\ResolveKioskDevice;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,7 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // This app is API-only and has no "login" route to redirect guests
+        // to, so unauthenticated requests should always fall through to the
+        // AuthenticationException JSON handler below instead of redirecting.
+        Authenticate::redirectUsing(fn () => null);
+
+        $middleware->alias([
+            'kiosk' => ResolveKioskDevice::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $isApiRequest = fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();

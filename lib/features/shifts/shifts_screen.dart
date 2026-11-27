@@ -569,37 +569,77 @@ class _ShiftCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.xs,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      shift.name,
-                      style: AppTypography.headlineSm(
-                        color: AppColors.textPrimary,
-                      ),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        Text(
+                          shift.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleMd(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (shift.shiftType != null &&
+                            shift.shiftType!.isNotEmpty)
+                          _Pill(
+                            label: shift.shiftType!,
+                            background: AppColors.secondaryButtonBackground,
+                            border: AppColors.secondaryButtonBorder,
+                            textColor: AppColors.secondaryButtonText,
+                          ),
+                      ],
                     ),
-                    if (shift.shiftType != null && shift.shiftType!.isNotEmpty)
-                      _Pill(
-                        label: shift.shiftType!,
-                        background: AppColors.secondaryButtonBackground,
-                        border: AppColors.secondaryButtonBorder,
-                        textColor: AppColors.secondaryButtonText,
+                    if (shift.description != null &&
+                        shift.description!.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        shift.description!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodyMd(color: AppColors.primary),
                       ),
+                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               _statusChip(shift.isActive),
+              const SizedBox(width: AppSpacing.xs),
+              PopupMenuButton<String>(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.base),
+                ),
+                onSelected: (value) {
+                  if (value == 'toggle') onToggleStatus();
+                  if (value == 'delete') onDelete();
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'toggle',
+                    child: Text(shift.isActive ? 'Deactivate' : 'Activate'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      'Delete',
+                      style: TextStyle(color: AppColors.error),
+                    ),
+                  ),
+                ],
+                child: const Icon(
+                  Icons.more_vert,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
+              ),
             ],
           ),
-          if (shift.description != null && shift.description!.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              shift.description!,
-              style: AppTypography.bodyMd(color: AppColors.textMuted),
-            ),
-          ],
           const SizedBox(height: AppSpacing.md),
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
@@ -680,12 +720,13 @@ class _ShiftCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: AppColors.surfaceInput,
               borderRadius: BorderRadius.circular(AppRadius.base),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
@@ -699,68 +740,31 @@ class _ShiftCard extends StatelessWidget {
                       ),
                       if (shift.assignedStaff.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
                           child: _AvatarStack(staff: shift.assignedStaff),
                         ),
                     ],
                   ),
                 ),
+                const SizedBox(width: AppSpacing.sm),
                 TextButton(onPressed: onManage, child: const Text('Manage')),
+                const SizedBox(width: AppSpacing.xs),
                 OutlinedButton.icon(
                   onPressed: onAssign,
-                  icon: const Icon(Icons.person_add_alt_1, size: 16),
+                  icon: const Icon(Icons.person_add_alt_1, size: 18),
                   label: const Text('Assign'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined, size: 16),
-                  label: const Text('Edit Shift'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              PopupMenuButton<String>(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.base),
-                ),
-                onSelected: (value) {
-                  if (value == 'toggle') onToggleStatus();
-                  if (value == 'delete') onDelete();
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'toggle',
-                    child: Text(shift.isActive ? 'Deactivate' : 'Activate'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: AppColors.error),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  width: AppSpacing.minTouchTarget,
-                  height: AppSpacing.minTouchTarget,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceInput,
-                    borderRadius: BorderRadius.circular(AppRadius.base),
-                  ),
-                  child: const Icon(
-                    Icons.more_horiz,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Edit Shift'),
+            ),
           ),
         ],
       ),
@@ -793,7 +797,7 @@ class _ShiftCard extends StatelessWidget {
             height: 6,
             decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           Text(
             isActive ? 'Active' : 'Inactive',
             style: AppTypography.labelSm(color: text),
@@ -848,15 +852,24 @@ class _MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceInput,
         borderRadius: BorderRadius.circular(AppRadius.base),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.textMuted),
-          const SizedBox(width: AppSpacing.xs),
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(AppRadius.base),
+            ),
+            child: Icon(icon, size: 20, color: AppColors.textSecondary),
+          ),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,6 +878,7 @@ class _MiniStat extends StatelessWidget {
                   label,
                   style: AppTypography.labelSm(color: AppColors.textMuted),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: AppTypography.labelLg(color: AppColors.textPrimary),
@@ -911,8 +925,8 @@ class _AvatarStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const size = 28.0;
-    const overlap = 18.0;
+    const size = 44.0;
+    const overlap = 32.0;
     final shown = staff.take(5).toList();
 
     return SizedBox(
@@ -933,7 +947,7 @@ class _AvatarStack extends StatelessWidget {
                 ),
                 child: Text(
                   _initialsFor(shown[i].fullName),
-                  style: AppTypography.labelSm(color: AppColors.onPrimary),
+                  style: AppTypography.labelMd(color: AppColors.onPrimary),
                 ),
               ),
             ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_spacing.dart';
-import '../core/constants/app_typography.dart';
 
 class AppBottomNavItem {
   const AppBottomNavItem({required this.label, required this.assetPath});
@@ -128,12 +128,26 @@ class _NavBarButton extends StatelessWidget {
             AnimatedDefaultTextStyle(
               duration: _duration,
               curve: _curve,
-              style: AppTypography.labelSm(color: targetColor),
+              style: _navLabelStyle(targetColor),
               child: Text(item.label),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Pinned at 11px — this is the one place in the app that keeps the
+  /// original compact label size rather than the larger shared
+  /// AppTypography.labelSm, per an explicit approved design spec for the
+  /// bottom nav bar.
+  TextStyle _navLabelStyle(Color color) {
+    return GoogleFonts.beVietnamPro(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      height: 14 / 11,
+      letterSpacing: 0.33,
+      color: color,
     );
   }
 }

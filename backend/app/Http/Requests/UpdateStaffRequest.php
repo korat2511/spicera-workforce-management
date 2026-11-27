@@ -58,6 +58,9 @@ class UpdateStaffRequest extends FormRequest
             'joining_date' => [$required, 'date'],
             'salary_type' => [$required, Rule::in(['Monthly', 'Daily', 'Hourly'])],
             'salary_rate' => [$required, 'numeric', 'min:0'],
+            'overtime_rate_type' => ['sometimes', 'nullable', Rule::in(['not_eligible', '1x', '1.5x', '2x', 'custom'])],
+            'overtime_custom_type' => ['required_if:overtime_rate_type,custom', 'nullable', Rule::in(['multiplier', 'fixed_rate'])],
+            'overtime_custom_rate' => ['required_if:overtime_rate_type,custom', 'nullable', 'numeric', 'min:0'],
             'notes' => ['sometimes', 'nullable', 'string'],
             'profile_photo' => ['sometimes', 'nullable', 'image', 'max:5120'],
         ];

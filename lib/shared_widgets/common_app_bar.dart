@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/auth/auth_controller.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_radius.dart';
 import '../core/constants/app_spacing.dart';
 import '../core/constants/app_typography.dart';
 import '../core/utils/date_time_utils.dart';
+import '../core/utils/navigation_utils.dart';
 import '../core/utils/responsive_utils.dart';
+import '../features/attendance/gate_screen.dart';
+import '../features/auth/data/auth_api_service.dart';
 
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CommonAppBar({super.key, this.leading, this.actions});
@@ -125,17 +129,66 @@ class _NotificationButton extends StatelessWidget {
 class _UserAvatar extends StatelessWidget {
   const _UserAvatar();
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await const AuthApiService().logout();
+    } catch (_) {
+      // Best-effort: proceed with clearing the local session regardless.
+    }
+    await authController.logout();
+    if (!context.mounted) return;
+    NavigationUtils.pushAndRemoveUntil(const GateScreen(), context: context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: CommonAppBar._iconButtonSize,
-      height: CommonAppBar._iconButtonSize,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
+    return PopupMenuButton<String>(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.base),
       ),
-      child: const Icon(Icons.person, color: AppColors.onPrimary, size: 22),
+      onSelected: (_) => _confirmLogout(context),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout, size: 18, color: AppColors.textSecondary),
+              SizedBox(width: AppSpacing.sm),
+              Text('Log Out'),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        width: CommonAppBar._iconButtonSize,
+        height: CommonAppBar._iconButtonSize,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.person, color: AppColors.onPrimary, size: 22),
+      ),
     );
   }
 }

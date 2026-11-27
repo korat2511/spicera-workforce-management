@@ -6,6 +6,10 @@ class DateTimeUtils {
   static String formatDayDate(DateTime dateTime) =>
       DateFormat('EEE, d MMM').format(dateTime);
 
+  /// Formats a date as a 3-letter weekday abbreviation (e.g. "MON").
+  static String formatWeekdayShort(DateTime dateTime) =>
+      DateFormat('EEE').format(dateTime).toUpperCase();
+
   static String formatTime(DateTime dateTime) =>
       DateFormat('h:mm a').format(dateTime);
 
@@ -19,4 +23,15 @@ class DateTimeUtils {
 
   static String toApiDate(DateTime dateTime) =>
       DateFormat('yyyy-MM-dd').format(dateTime);
+
+  /// Formats a "yyyy-MM-dd" API date string (e.g. "2026-09-01") as
+  /// "1 Sep 2026".
+  static String formatApiDate(String isoDate) =>
+      DateFormat('d MMM yyyy').format(DateTime.parse(isoDate));
+
+  /// Formats an ISO8601 API timestamp (e.g. "2026-11-27T06:39:10+00:00") as
+  /// "27 Nov 2026, 12:09 PM" in the device's local time.
+  static String formatApiDateTime(String isoDateTime) => DateFormat(
+    'd MMM yyyy, h:mm a',
+  ).format(DateTime.parse(isoDateTime).toLocal());
 }

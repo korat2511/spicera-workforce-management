@@ -117,7 +117,7 @@ class _AssignStaffToShiftDialogState extends State<AssignStaffToShiftDialog> {
                 'Assign Staff',
                 style: AppTypography.headlineSm(color: AppColors.textPrimary),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 widget.shift.name,
                 style: AppTypography.bodyMd(color: AppColors.textMuted),
@@ -330,7 +330,7 @@ class _ManageShiftStaffDialogState extends State<ManageShiftStaffDialog> {
                   'Manage Staff',
                   style: AppTypography.headlineSm(color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   widget.shift.name,
                   style: AppTypography.bodyMd(color: AppColors.textMuted),

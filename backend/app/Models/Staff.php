@@ -31,6 +31,9 @@ class Staff extends Model
         'joining_date',
         'salary_type',
         'salary_rate',
+        'overtime_rate_type',
+        'overtime_custom_type',
+        'overtime_custom_rate',
         'status',
         'profile_photo',
         'notes',
@@ -50,6 +53,7 @@ class Staff extends Model
             'date_of_birth' => 'date',
             'joining_date' => 'date',
             'salary_rate' => 'decimal:2',
+            'overtime_custom_rate' => 'decimal:2',
         ];
     }
 
@@ -67,6 +71,24 @@ class Staff extends Model
     {
         return Attribute::make(
             get: fn (): string => trim("{$this->first_name} {$this->last_name}"),
+        );
+    }
+
+    protected function overtimeLabel(): Attribute
+    {
+        return Attribute::make(
+            get: function (): string {
+                if ($this->overtime_rate_type !== 'custom') {
+                    return match ($this->overtime_rate_type) {
+                        '1x', '1.5x', '2x' => "{$this->overtime_rate_type} regular rate",
+                        default => 'Not eligible',
+                    };
+                }
+
+                return $this->overtime_custom_type === 'fixed_rate'
+                    ? "\${$this->overtime_custom_rate}/hr (Custom)"
+                    : "{$this->overtime_custom_rate}x regular rate (Custom)";
+            },
         );
     }
 }

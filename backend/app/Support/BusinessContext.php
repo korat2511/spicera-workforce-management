@@ -3,20 +3,29 @@
 namespace App\Support;
 
 use App\Models\Business;
+use App\Models\KioskDevice;
 
 class BusinessContext
 {
     /**
      * Resolve the business that the current request operates on.
      *
-     * Phase 1 has no authentication yet, so this always returns the single
-     * seeded business. Phase 2 (Authentication & Business) will change only
-     * this method's internals to resolve the business from the
-     * authenticated Sanctum user — callers (controllers/services) do not
-     * need to change.
+     * Resolves from the authenticated Sanctum user's business first, then
+     * from a paired kiosk device (see ResolveKioskDevice middleware) for
+     * unauthenticated kiosk requests, falling back to the single seeded
+     * business otherwise.
      */
     public static function resolve(): Business
     {
-        return Business::firstOrFail();
+        $user = request()->user();
+
+        if ($user?->business) {
+            return $user->business;
+        }
+
+        /** @var KioskDevice|null $device */
+        $device = request()->attributes->get('kioskDevice');
+
+        return $device?->business ?? Business::firstOrFail();
     }
 }

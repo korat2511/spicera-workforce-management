@@ -9,12 +9,27 @@ import 'api_exception.dart';
 class ApiClient {
   ApiClient._();
 
+  static String? _authToken;
+  static String? _kioskToken;
+
+  static void setAuthToken(String? token) => _authToken = token;
+
+  static void setKioskToken(String? token) => _kioskToken = token;
+
+  static Map<String, String> get _authHeaders => {
+    if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+    'X-Kiosk-Token': ?_kioskToken,
+  };
+
   static Future<Map<String, dynamic>> get(String path) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}$path');
 
     final http.Response response;
     try {
-      response = await http.get(uri, headers: {'Accept': 'application/json'});
+      response = await http.get(
+        uri,
+        headers: {'Accept': 'application/json', ..._authHeaders},
+      );
     } on SocketException {
       throw ApiException('No internet connection. Please try again.');
     } catch (_) {
@@ -37,6 +52,7 @@ class ApiClient {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          ..._authHeaders,
         },
         body: jsonEncode(body),
       );
@@ -62,6 +78,7 @@ class ApiClient {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          ..._authHeaders,
         },
         body: jsonEncode(body),
       );
@@ -81,7 +98,7 @@ class ApiClient {
     try {
       response = await http.delete(
         uri,
-        headers: {'Accept': 'application/json'},
+        headers: {'Accept': 'application/json', ..._authHeaders},
       );
     } on SocketException {
       throw ApiException('No internet connection. Please try again.');
@@ -101,6 +118,7 @@ class ApiClient {
     final uri = Uri.parse('${ApiConstants.baseUrl}$path');
     final request = http.MultipartRequest('POST', uri)
       ..headers['Accept'] = 'application/json'
+      ..headers.addAll(_authHeaders)
       ..fields.addAll(fields);
 
     if (file != null) {

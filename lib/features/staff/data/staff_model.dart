@@ -14,6 +14,10 @@ class Staff {
     required this.joiningDate,
     required this.salaryType,
     required this.salaryRate,
+    this.overtimeRateType = 'not_eligible',
+    this.overtimeCustomType,
+    this.overtimeCustomRate,
+    this.overtimeLabel = 'Not eligible',
     required this.currency,
     required this.status,
     this.profilePhotoUrl,
@@ -35,6 +39,10 @@ class Staff {
       joiningDate: json['joining_date'] as String,
       salaryType: json['salary_type'] as String,
       salaryRate: json['salary_rate'] as String,
+      overtimeRateType: json['overtime_rate_type'] as String? ?? 'not_eligible',
+      overtimeCustomType: json['overtime_custom_type'] as String?,
+      overtimeCustomRate: json['overtime_custom_rate'] as String?,
+      overtimeLabel: json['overtime_label'] as String? ?? 'Not eligible',
       currency: json['currency'] as String,
       status: json['status'] as String,
       profilePhotoUrl: json['profile_photo'] as String?,
@@ -57,6 +65,10 @@ class Staff {
   final String joiningDate;
   final String salaryType;
   final String salaryRate;
+  final String overtimeRateType;
+  final String? overtimeCustomType;
+  final String? overtimeCustomRate;
+  final String overtimeLabel;
   final String currency;
   final String status;
   final String? profilePhotoUrl;

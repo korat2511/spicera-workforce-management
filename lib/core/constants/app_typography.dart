@@ -21,94 +21,94 @@ class AppTypography {
   }
 
   static TextStyle displayLg({Color? color}) => _style(
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: FontWeight.w700,
-    lineHeight: 44,
-    letterSpacing: -0.72,
+    lineHeight: 48,
+    letterSpacing: -0.8,
     color: color,
   );
 
   static TextStyle displayLgMobile({Color? color}) => _style(
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: FontWeight.w700,
-    lineHeight: 36,
-    letterSpacing: -0.56,
+    lineHeight: 40,
+    letterSpacing: -0.64,
     color: color,
   );
 
   static TextStyle headlineLg({Color? color}) => _style(
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: FontWeight.w600,
-    lineHeight: 36,
-    letterSpacing: -0.42,
+    lineHeight: 38,
+    letterSpacing: -0.45,
     color: color,
   );
 
   static TextStyle headlineMd({Color? color}) => _style(
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: FontWeight.w600,
-    lineHeight: 30,
-    letterSpacing: -0.22,
+    lineHeight: 32,
+    letterSpacing: -0.24,
     color: color,
   );
 
   static TextStyle headlineSm({Color? color}) => _style(
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: FontWeight.w600,
-    lineHeight: 26,
-    letterSpacing: -0.09,
+    lineHeight: 28,
+    letterSpacing: -0.1,
     color: color,
   );
 
   static TextStyle titleMd({Color? color}) => _style(
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: FontWeight.w600,
-    lineHeight: 24,
+    lineHeight: 26,
     color: color,
   );
 
   static TextStyle bodyLg({Color? color}) => _style(
+    fontSize: 18,
+    fontWeight: FontWeight.w400,
+    lineHeight: 26,
+    color: color,
+  );
+
+  static TextStyle bodyMd({Color? color}) => _style(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     lineHeight: 24,
     color: color,
   );
 
-  static TextStyle bodyMd({Color? color}) => _style(
+  static TextStyle bodySm({Color? color}) => _style(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     lineHeight: 20,
-    color: color,
-  );
-
-  static TextStyle bodySm({Color? color}) => _style(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    lineHeight: 16,
     color: color,
   );
 
   static TextStyle labelLg({Color? color}) => _style(
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
-    lineHeight: 20,
-    letterSpacing: 0.14,
+    lineHeight: 24,
+    letterSpacing: 0.16,
     color: color,
   );
 
   static TextStyle labelMd({Color? color}) => _style(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
-    lineHeight: 16,
-    letterSpacing: 0.24,
+    lineHeight: 20,
+    letterSpacing: 0.26,
     color: color,
   );
 
   static TextStyle labelSm({Color? color}) => _style(
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: FontWeight.w500,
-    lineHeight: 14,
-    letterSpacing: 0.33,
+    lineHeight: 18,
+    letterSpacing: 0.35,
     color: color,
   );
 

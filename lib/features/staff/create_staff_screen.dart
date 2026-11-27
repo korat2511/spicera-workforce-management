@@ -27,6 +27,8 @@ class CreateStaffScreen extends StatefulWidget {
 class _CreateStaffScreenState extends State<CreateStaffScreen> {
   static const _employmentTypes = ['Full-time', 'Part-time', 'Casual', 'Other'];
   static const _salaryTypes = ['Monthly', 'Daily', 'Hourly'];
+  static const _overtimeRateTypeKeys = ['not_eligible', '1x', '1.5x', '2x', 'custom'];
+  static const _overtimeRateTypeLabels = ['Not Eligible', '1x', '1.5x', '2x', 'Custom'];
   static const _genders = ['Male', 'Female', 'Other'];
   static const _states = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
@@ -38,6 +40,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
   final _emailController = TextEditingController();
   final _jobTitleController = TextEditingController();
   final _salaryRateController = TextEditingController();
+  final _overtimeCustomRateController = TextEditingController();
   final _streetAddressController = TextEditingController();
   final _suburbController = TextEditingController();
   final _postcodeController = TextEditingController();
@@ -51,6 +54,8 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
   String? _state;
   String _employmentType = _employmentTypes.first;
   String _salaryType = _salaryTypes.first;
+  String _overtimeRateType = 'not_eligible';
+  String _overtimeCustomType = 'multiplier';
   bool _isSaving = false;
   File? _profilePhoto;
 
@@ -61,6 +66,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
     _emailController.dispose();
     _jobTitleController.dispose();
     _salaryRateController.dispose();
+    _overtimeCustomRateController.dispose();
     _streetAddressController.dispose();
     _suburbController.dispose();
     _postcodeController.dispose();
@@ -176,6 +182,22 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
     return null;
   }
 
+  String? _validateOvertimeCustomRate(String? value) {
+    if (_overtimeRateType != 'custom') {
+      return null;
+    }
+    if (value == null || value.trim().isEmpty) {
+      return _overtimeCustomType == 'fixed_rate'
+          ? 'Custom hourly rate is required'
+          : 'Custom multiplier is required';
+    }
+    final parsed = double.tryParse(value.trim());
+    if (parsed == null || parsed < 0) {
+      return 'Enter a valid non-negative amount';
+    }
+    return null;
+  }
+
   Future<void> _handleSave() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -197,6 +219,13 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
         joiningDate: _joiningDate,
         salaryType: _salaryType,
         salaryRate: double.parse(_salaryRateController.text.trim()),
+        overtimeRateType: _overtimeRateType,
+        overtimeCustomType: _overtimeRateType == 'custom'
+            ? _overtimeCustomType
+            : null,
+        overtimeCustomRate: _overtimeRateType == 'custom'
+            ? double.parse(_overtimeCustomRateController.text.trim())
+            : null,
         email: _emailController.text.trim(),
         dateOfBirth: _dateOfBirth,
         gender: _gender,
@@ -427,6 +456,68 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     decoration: const InputDecoration(prefixText: '\$ '),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.lg),
+                _labeledField(
+                  label: 'Overtime Pay Rate',
+                  required: true,
+                  helper: 'How overtime hours are paid relative to the regular rate',
+                  field: AppSegmentedControl(
+                    options: _overtimeRateTypeLabels,
+                    value: _overtimeRateTypeLabels[_overtimeRateTypeKeys.indexOf(
+                      _overtimeRateType,
+                    )],
+                    onChanged: (v) => setState(() {
+                      _overtimeRateType =
+                          _overtimeRateTypeKeys[_overtimeRateTypeLabels.indexOf(
+                            v,
+                          )];
+                    }),
+                  ),
+                ),
+                if (_overtimeRateType == 'custom') ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _labeledField(
+                    label: 'Custom Overtime Type',
+                    required: true,
+                    field: AppSegmentedControl(
+                      options: const ['Multiplier', 'Fixed Rate'],
+                      value: _overtimeCustomType == 'fixed_rate'
+                          ? 'Fixed Rate'
+                          : 'Multiplier',
+                      onChanged: (v) => setState(() {
+                        _overtimeCustomType = v == 'Fixed Rate'
+                            ? 'fixed_rate'
+                            : 'multiplier';
+                      }),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _labeledField(
+                    label: _overtimeCustomType == 'fixed_rate'
+                        ? 'Custom Hourly Rate'
+                        : 'Custom Multiplier',
+                    required: true,
+                    helper: _overtimeCustomType == 'fixed_rate'
+                        ? 'AUD paid per overtime hour'
+                        : 'e.g. 1.75 pays 1.75x the regular rate',
+                    field: TextFormField(
+                      controller: _overtimeCustomRateController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      autocorrect: false,
+                      validator: _validateOvertimeCustomRate,
+                      decoration: InputDecoration(
+                        prefixText: _overtimeCustomType == 'fixed_rate'
+                            ? '\$ '
+                            : null,
+                        suffixText: _overtimeCustomType == 'multiplier'
+                            ? 'x'
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 _labeledField(
                   label: 'Effective From Date',

@@ -43,6 +43,9 @@ class StaffApiService {
     required DateTime joiningDate,
     required String salaryType,
     required double salaryRate,
+    String overtimeRateType = 'not_eligible',
+    String? overtimeCustomType,
+    double? overtimeCustomRate,
     String? email,
     DateTime? dateOfBirth,
     String? gender,
@@ -62,6 +65,10 @@ class StaffApiService {
       'joining_date': DateTimeUtils.toApiDate(joiningDate),
       'salary_type': salaryType,
       'salary_rate': salaryRate.toStringAsFixed(2),
+      'overtime_rate_type': overtimeRateType,
+      'overtime_custom_type': ?overtimeCustomType,
+      if (overtimeCustomRate != null)
+        'overtime_custom_rate': overtimeCustomRate.toStringAsFixed(2),
       if (email != null && email.isNotEmpty) 'email': email,
       if (dateOfBirth != null)
         'date_of_birth': DateTimeUtils.toApiDate(dateOfBirth),
@@ -84,6 +91,45 @@ class StaffApiService {
     return Staff.fromJson(response['data'] as Map<String, dynamic>);
   }
 
+  Future<Staff> updateStaff({
+    required int staffId,
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String employmentType,
+    required DateTime joiningDate,
+    required String salaryType,
+    required double salaryRate,
+    String overtimeRateType = 'not_eligible',
+    String? overtimeCustomType,
+    double? overtimeCustomRate,
+    String? email,
+    String? jobTitle,
+  }) async {
+    final body = <String, dynamic>{
+      'first_name': firstName,
+      'last_name': lastName,
+      'phone': phone,
+      'employment_type': employmentType,
+      'joining_date': DateTimeUtils.toApiDate(joiningDate),
+      'salary_type': salaryType,
+      'salary_rate': salaryRate.toStringAsFixed(2),
+      'overtime_rate_type': overtimeRateType,
+      'overtime_custom_type': ?overtimeCustomType,
+      if (overtimeCustomRate != null)
+        'overtime_custom_rate': overtimeCustomRate.toStringAsFixed(2),
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (jobTitle != null && jobTitle.isNotEmpty) 'job_title': jobTitle,
+    };
+
+    final response = await ApiClient.patchJson(
+      path: '/staff/$staffId',
+      body: body,
+    );
+
+    return Staff.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
   Future<Staff> setPin({
     required int staffId,
     required String pin,
@@ -92,6 +138,18 @@ class StaffApiService {
     final response = await ApiClient.patchJson(
       path: '/staff/$staffId/pin',
       body: {'pin': pin, 'pin_confirmation': pinConfirmation},
+    );
+
+    return Staff.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<Staff> changeStatus({
+    required int staffId,
+    required String status,
+  }) async {
+    final response = await ApiClient.patchJson(
+      path: '/staff/$staffId/status',
+      body: {'status': status},
     );
 
     return Staff.fromJson(response['data'] as Map<String, dynamic>);

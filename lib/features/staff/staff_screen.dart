@@ -7,13 +7,14 @@ import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/utils/date_time_utils.dart';
 import '../../core/utils/navigation_utils.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/utils/snackbar_utils.dart';
-import '../../shared_widgets/app_segmented_control.dart';
 import 'create_staff_screen.dart';
 import 'data/staff_api_service.dart';
 import 'data/staff_model.dart';
+import 'staff_profile_screen.dart';
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
@@ -23,7 +24,6 @@ class StaffScreen extends StatefulWidget {
 }
 
 class _StaffScreenState extends State<StaffScreen> {
-  static const _statusOptions = ['All', 'Active', 'Inactive'];
   static const _employmentTypeOptions = [
     'All',
     'Full-time',
@@ -44,6 +44,9 @@ class _StaffScreenState extends State<StaffScreen> {
   bool _isLoadingMore = false;
   String? _loadError;
 
+  int _activeCount = 0;
+  int _inactiveCount = 0;
+
   String _statusFilter = 'All';
   String _employmentTypeFilter = 'All';
 
@@ -54,6 +57,7 @@ class _StaffScreenState extends State<StaffScreen> {
   void initState() {
     super.initState();
     _loadFirstPage();
+    _loadStats();
   }
 
   @override
@@ -66,6 +70,29 @@ class _StaffScreenState extends State<StaffScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), _loadFirstPage);
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final results = await Future.wait([
+        _staffApiService.getStaffList(status: 'active', page: 1, perPage: 1),
+        _staffApiService.getStaffList(status: 'inactive', page: 1, perPage: 1),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _activeCount = results[0].total;
+        _inactiveCount = results[1].total;
+      });
+    } catch (_) {
+      // Overview stats are non-critical — leave them as-is on failure.
+    }
+  }
+
+  Future<void> _refresh() => Future.wait([_loadFirstPage(), _loadStats()]);
+
+  void _onStatusTabChanged(String status) {
+    setState(() => _statusFilter = status);
+    _loadFirstPage();
   }
 
   Future<void> _loadFirstPage() async {
@@ -140,24 +167,6 @@ class _StaffScreenState extends State<StaffScreen> {
     }
   }
 
-  Future<void> _openFilterDialog() async {
-    final result = await showDialog<(String, String)>(
-      context: context,
-      builder: (context) => _FilterDialog(
-        initialStatus: _statusFilter,
-        initialEmploymentType: _employmentTypeFilter,
-      ),
-    );
-
-    if (result == null) return;
-
-    setState(() {
-      _statusFilter = result.$1;
-      _employmentTypeFilter = result.$2;
-    });
-    _loadFirstPage();
-  }
-
   void _goToAddStaff() {
     NavigationUtils.push(const CreateStaffScreen(), context: context);
   }
@@ -166,8 +175,65 @@ class _StaffScreenState extends State<StaffScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding:
+              ResponsiveUtils.screenPadding(context) +
+              const EdgeInsets.only(top: AppSpacing.md),
+          child: _buildStatsRow(context),
+        ),
         _buildToolbar(context),
         Expanded(child: _buildBody(context)),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(BuildContext context) {
+    final totalCount = _activeCount + _inactiveCount;
+
+    final cards = [
+      _StatCard(
+        label: 'TOTAL STAFF',
+        value: '$totalCount',
+        caption: 'All Team Members',
+        icon: Icons.groups_outlined,
+        iconBackground: AppColors.surfaceHighlight,
+        iconColor: AppColors.primary,
+      ),
+      _StatCard(
+        label: 'ACTIVE STAFF',
+        value: '$_activeCount',
+        caption: 'Currently Working',
+        icon: Icons.check_circle_outline,
+        iconBackground: AppColors.onDutyBackground,
+        iconColor: AppColors.onDutyText,
+      ),
+      _StatCard(
+        label: 'INACTIVE STAFF',
+        value: '$_inactiveCount',
+        caption: 'Not Active',
+        icon: Icons.person_off_outlined,
+        iconBackground: AppColors.offDutyBackground,
+        iconColor: AppColors.offDutyText,
+      ),
+    ];
+
+    if (ResponsiveUtils.isMobile(context)) {
+      return Column(
+        children: [
+          for (final card in cards) ...[
+            card,
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          Expanded(child: cards[i]),
+          if (i != cards.length - 1) const SizedBox(width: AppSpacing.sm),
+        ],
       ],
     );
   }
@@ -177,58 +243,79 @@ class _StaffScreenState extends State<StaffScreen> {
       padding:
           ResponsiveUtils.screenPadding(context) +
           const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                hintText: 'Search by name, staff code or phone',
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Stack(
-            clipBehavior: Clip.none,
+          Row(
             children: [
-              IconButton(
-                onPressed: _openFilterDialog,
-                tooltip: 'Filters',
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.surfaceInput,
-                  minimumSize: const Size(
-                    AppSpacing.minTouchTarget,
-                    AppSpacing.minTouchTarget,
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    hintText: 'Search by name, staff code or phone',
+                    prefixIcon: Icon(Icons.search),
                   ),
-                ),
-                icon: const Icon(
-                  Icons.filter_list,
-                  color: AppColors.textPrimary,
                 ),
               ),
-              if (_hasActiveFilters)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
+              const SizedBox(width: AppSpacing.sm),
+              ElevatedButton.icon(
+                onPressed: _goToAddStaff,
+                icon: const Icon(Icons.person_add_alt_1, size: 18),
+                label: const Text('Add Staff'),
+              ),
             ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          ElevatedButton.icon(
-            onPressed: _goToAddStaff,
-            icon: const Icon(Icons.person_add_alt_1, size: 18),
-            label: const Text('Add Staff'),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _TabChip(
+                        label: 'All (${_activeCount + _inactiveCount})',
+                        selected: _statusFilter == 'All',
+                        onTap: () => _onStatusTabChanged('All'),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _TabChip(
+                        label: 'Active ($_activeCount)',
+                        selected: _statusFilter == 'Active',
+                        onTap: () => _onStatusTabChanged('Active'),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _TabChip(
+                        label: 'Inactive ($_inactiveCount)',
+                        selected: _statusFilter == 'Inactive',
+                        onTap: () => _onStatusTabChanged('Inactive'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _employmentTypeFilter,
+                  borderRadius: BorderRadius.circular(AppRadius.base),
+                  items: [
+                    for (final option in _employmentTypeOptions)
+                      DropdownMenuItem(
+                        value: option,
+                        child: Text(option == 'All' ? 'All Types' : option),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _employmentTypeFilter = value);
+                    _loadFirstPage();
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -267,22 +354,46 @@ class _StaffScreenState extends State<StaffScreen> {
       return _buildEmptyState(context);
     }
 
+    final columns = ResponsiveUtils.value<int>(
+      context,
+      mobile: 1,
+      tablet: 2,
+      desktop: 3,
+    );
+
+    final rows = <List<Staff>>[];
+    for (var i = 0; i < _items.length; i += columns) {
+      rows.add(_items.skip(i).take(columns).toList());
+    }
+
     return RefreshIndicator(
-      onRefresh: _loadFirstPage,
-      child: ListView.builder(
+      onRefresh: _refresh,
+      child: ListView(
         padding:
             ResponsiveUtils.screenPadding(context) +
             const EdgeInsets.only(bottom: AppSpacing.xl),
-        itemCount: _items.length + 1,
-        itemBuilder: (context, index) {
-          if (index == _items.length) {
-            return _buildFooter();
-          }
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: _StaffCard(staff: _items[index]),
-          );
-        },
+        children: [
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < columns; i++) ...[
+                      if (i != 0) const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: i < row.length
+                            ? _StaffCard(staff: row[i], onChanged: _refresh)
+                            : const SizedBox(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          _buildFooter(),
+        ],
       ),
     );
   }
@@ -370,130 +481,134 @@ class _StaffScreenState extends State<StaffScreen> {
 }
 
 class _StaffCard extends StatelessWidget {
-  const _StaffCard({required this.staff});
+  const _StaffCard({required this.staff, required this.onChanged});
 
   final Staff staff;
+  final Future<void> Function() onChanged;
 
   @override
   Widget build(BuildContext context) {
     final isActive = staff.status == 'active';
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+    return Material(
+      color: AppColors.surfaceCard,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: InkWell(
+        onTap: () => _showStaffDetail(context, staff),
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _avatar(),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _avatar(),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                staff.fullName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleMd(
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _staffCodeBadge(),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          staff.jobTitle != null && staff.jobTitle!.isNotEmpty
+                              ? staff.jobTitle!
+                              : staff.employmentType,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodyMd(color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceInput,
+                  borderRadius: BorderRadius.circular(AppRadius.base),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      staff.fullName,
-                      style: AppTypography.headlineSm(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      [
-                        staff.staffCode,
-                        if (staff.jobTitle != null &&
-                            staff.jobTitle!.isNotEmpty)
-                          staff.jobTitle!
-                        else
-                          staff.employmentType,
-                      ].join(' · '),
-                      style: AppTypography.bodyMd(color: AppColors.textMuted),
-                    ),
-                    if (staff.shift != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.schedule,
-                            size: 14,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Joining Date',
+                          style: AppTypography.labelSm(
                             color: AppColors.textMuted,
                           ),
-                          const SizedBox(width: 4),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          DateTimeUtils.formatApiDate(staff.joiningDate),
+                          style: AppTypography.labelLg(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: AppSpacing.xl),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            staff.shift!.label,
-                            style: AppTypography.bodySm(
+                            'Shift',
+                            style: AppTypography.labelSm(
                               color: AppColors.textMuted,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                    if (!staff.pinSet) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            size: 14,
-                            color: AppColors.secondary,
-                          ),
-                          const SizedBox(width: 4),
+                          const SizedBox(height: 2),
                           Text(
-                            'PIN not set',
-                            style: AppTypography.bodySm(
-                              color: AppColors.secondary,
+                            staff.shift?.name ?? 'Unassigned',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelLg(
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    _statusChip(isActive),
                   ],
                 ),
               ),
-              _statusChip(isActive),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          const Divider(height: 1),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () => SnackbarUtils.showInfo(
-                    context,
-                    'Attendance tracking coming soon',
-                  ),
-                  icon: const Icon(Icons.login, size: 18),
-                  label: const Text('Mark Attendance'),
-                ),
-              ),
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () => SnackbarUtils.showInfo(
-                    context,
-                    'Attendance tracking coming soon',
-                  ),
-                  icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Clock Out'),
-                ),
-              ),
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () => _showStaffDetail(context, staff),
-                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: const Text('View Status'),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -507,13 +622,13 @@ class _StaffCard extends StatelessWidget {
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
-        color: AppColors.primary,
+        color: AppColors.surfaceHighlight,
         shape: BoxShape.circle,
       ),
       child: staff.profilePhotoUrl == null
           ? Text(
               initials,
-              style: AppTypography.labelLg(color: AppColors.onPrimary),
+              style: AppTypography.labelLg(color: AppColors.primary),
             )
           : Image.network(
               staff.profilePhotoUrl!,
@@ -522,9 +637,26 @@ class _StaffCard extends StatelessWidget {
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Text(
                 initials,
-                style: AppTypography.labelLg(color: AppColors.onPrimary),
+                style: AppTypography.labelLg(color: AppColors.primary),
               ),
             ),
+    );
+  }
+
+  Widget _staffCodeBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceInput,
+        borderRadius: BorderRadius.circular(AppRadius.base),
+      ),
+      child: Text(
+        staff.staffCode,
+        style: AppTypography.labelSm(color: AppColors.textSecondary),
+      ),
     );
   }
 
@@ -554,7 +686,7 @@ class _StaffCard extends StatelessWidget {
             height: 6,
             decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           Text(
             isActive ? 'Active' : 'Inactive',
             style: AppTypography.labelSm(color: text),
@@ -571,92 +703,74 @@ class _StaffCard extends StatelessWidget {
     return initials.isEmpty ? '?' : initials.toUpperCase();
   }
 
-  void _showStaffDetail(BuildContext context, Staff staff) {
-    showDialog<void>(
+  Future<void> _showStaffDetail(BuildContext context, Staff staff) async {
+    await NavigationUtils.push(
+      StaffProfileScreen(staff: staff),
       context: context,
-      builder: (context) => _StaffDetailDialog(staff: staff),
     );
+    onChanged();
   }
 }
 
-class _StaffDetailDialog extends StatelessWidget {
-  const _StaffDetailDialog({required this.staff});
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.caption,
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+  });
 
-  final Staff staff;
+  final String label;
+  final String value;
+  final String caption;
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.surfaceCard,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.panel),
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.border),
       ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                staff.fullName,
-                style: AppTypography.headlineSm(color: AppColors.textPrimary),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                staff.staffCode,
-                style: AppTypography.bodyMd(color: AppColors.textMuted),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _row('Status', staff.status == 'active' ? 'Active' : 'Inactive'),
-              _row('Phone', staff.phone),
-              if (staff.email != null) _row('Email', staff.email!),
-              _row('Employment Type', staff.employmentType),
-              if (staff.jobTitle != null) _row('Job Title', staff.jobTitle!),
-              _row('Joining Date', staff.joiningDate),
-              _row(
-                'Salary',
-                '\$${staff.salaryRate} ${staff.currency} / ${staff.salaryType.toLowerCase()}',
-              ),
-              _row(
-                'Shift',
-                staff.shift == null ? 'Not assigned' : staff.shift!.label,
-              ),
-              _row('Attendance PIN', staff.pinSet ? 'Set' : 'Not set'),
-              const SizedBox(height: AppSpacing.lg),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _row(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              style: AppTypography.bodyMd(color: AppColors.textMuted),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTypography.labelSm(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  value,
+                  style: AppTypography.displayLgMobile(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  caption,
+                  style: AppTypography.bodySm(color: AppColors.textMuted),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTypography.bodyMd(color: AppColors.textPrimary),
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              borderRadius: BorderRadius.circular(AppRadius.base),
             ),
+            child: Icon(icon, color: iconColor),
           ),
         ],
       ),
@@ -664,102 +778,37 @@ class _StaffDetailDialog extends StatelessWidget {
   }
 }
 
-class _FilterDialog extends StatefulWidget {
-  const _FilterDialog({
-    required this.initialStatus,
-    required this.initialEmploymentType,
+class _TabChip extends StatelessWidget {
+  const _TabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
   });
 
-  final String initialStatus;
-  final String initialEmploymentType;
-
-  @override
-  State<_FilterDialog> createState() => _FilterDialogState();
-}
-
-class _FilterDialogState extends State<_FilterDialog> {
-  late String _status = widget.initialStatus;
-  late String _employmentType = widget.initialEmploymentType;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.surfaceCard,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.panel),
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Filter Staff',
-                style: AppTypography.headlineSm(color: AppColors.textPrimary),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Status',
-                style: AppTypography.labelLg(
-                  color: AppColors.textPrimary,
-                ).copyWith(fontSize: 15),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              AppSegmentedControl(
-                options: _StaffScreenState._statusOptions,
-                value: _status,
-                onChanged: (v) => setState(() => _status = v),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Employment Type',
-                style: AppTypography.labelLg(
-                  color: AppColors.textPrimary,
-                ).copyWith(fontSize: 15),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  for (final option in _StaffScreenState._employmentTypeOptions)
-                    ChoiceChip(
-                      label: Text(option),
-                      selected: _employmentType == option,
-                      onSelected: (_) =>
-                          setState(() => _employmentType = option),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _status = 'All';
-                        _employmentType = 'All';
-                      });
-                    },
-                    child: const Text('Clear'),
-                  ),
-                  const Spacer(),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  ElevatedButton(
-                    onPressed: () =>
-                        Navigator.of(context).pop((_status, _employmentType)),
-                    child: const Text('Apply'),
-                  ),
-                ],
-              ),
-            ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surfaceInput,
+          borderRadius: BorderRadius.circular(AppRadius.base),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelLg(
+            color: selected ? AppColors.onPrimary : AppColors.textSecondary,
           ),
         ),
       ),

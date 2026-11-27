@@ -34,8 +34,8 @@ class AppSectionCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 28,
-                height: 28,
+                width: 36,
+                height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
@@ -43,7 +43,7 @@ class AppSectionCard extends StatelessWidget {
                 ),
                 child: Text(
                   letter,
-                  style: AppTypography.labelMd(color: AppColors.onPrimary),
+                  style: AppTypography.labelLg(color: AppColors.onPrimary),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -66,7 +66,7 @@ class AppSectionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.md),
           ...children,
         ],
       ),

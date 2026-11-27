@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Business;
 use App\Models\Shift;
 use App\Models\Staff;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class StaffApiTest extends TestCase
@@ -20,6 +22,7 @@ class StaffApiTest extends TestCase
         parent::setUp();
 
         $this->business = Business::factory()->create();
+        Sanctum::actingAs(User::factory()->create());
     }
 
     public function test_it_lists_staff_with_pagination(): void
@@ -163,6 +166,64 @@ class StaffApiTest extends TestCase
             ->assertJsonValidationErrors(['salary_rate']);
     }
 
+    public function test_it_defaults_overtime_to_not_eligible_when_omitted(): void
+    {
+        $payload = $this->validStaffPayload();
+
+        $this->postJson('/api/v1/staff', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.overtime_rate_type', 'not_eligible')
+            ->assertJsonPath('data.overtime_label', 'Not eligible');
+    }
+
+    public function test_it_creates_a_staff_member_with_a_custom_overtime_rate(): void
+    {
+        $payload = $this->validStaffPayload([
+            'overtime_rate_type' => 'custom',
+            'overtime_custom_type' => 'multiplier',
+            'overtime_custom_rate' => 1.75,
+        ]);
+
+        $response = $this->postJson('/api/v1/staff', $payload);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.overtime_rate_type', 'custom')
+            ->assertJsonPath('data.overtime_custom_type', 'multiplier')
+            ->assertJsonPath('data.overtime_custom_rate', '1.75')
+            ->assertJsonPath('data.overtime_label', '1.75x regular rate (Custom)');
+    }
+
+    public function test_it_rejects_custom_overtime_without_required_subfields(): void
+    {
+        $payload = $this->validStaffPayload(['overtime_rate_type' => 'custom']);
+
+        $this->postJson('/api/v1/staff', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['overtime_custom_type', 'overtime_custom_rate']);
+    }
+
+    public function test_it_clears_custom_overtime_fields_when_switched_away_from_custom(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create([
+            'overtime_rate_type' => 'custom',
+            'overtime_custom_type' => 'multiplier',
+            'overtime_custom_rate' => 1.75,
+        ]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}", ['overtime_rate_type' => '1.5x'])
+            ->assertOk()
+            ->assertJsonPath('data.overtime_rate_type', '1.5x')
+            ->assertJsonPath('data.overtime_custom_type', null)
+            ->assertJsonPath('data.overtime_custom_rate', null);
+
+        $this->assertDatabaseHas('staff', [
+            'id' => $staff->id,
+            'overtime_rate_type' => '1.5x',
+            'overtime_custom_type' => null,
+            'overtime_custom_rate' => null,
+        ]);
+    }
+
     public function test_it_fully_replaces_a_staff_member_with_put(): void
     {
         $staff = Staff::factory()->for($this->business)->create();
@@ -242,6 +303,43 @@ class StaffApiTest extends TestCase
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['pin']);
+    }
+
+    public function test_it_rejects_a_pin_already_used_by_another_staff_member_in_the_same_business(): void
+    {
+        Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+        $staffB = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staffB->id}/pin", [
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['pin']);
+
+        $this->assertNull($staffB->fresh()->pin_hash);
+    }
+
+    public function test_it_allows_the_same_pin_across_different_businesses(): void
+    {
+        $otherBusiness = Business::factory()->create();
+        Staff::factory()->for($otherBusiness)->create(['pin_hash' => Hash::make('123456')]);
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ])->assertOk();
+    }
+
+    public function test_it_allows_resetting_a_staff_member_to_their_own_existing_pin(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ])->assertOk();
     }
 
     public function test_it_assigns_a_shift_to_staff(): void

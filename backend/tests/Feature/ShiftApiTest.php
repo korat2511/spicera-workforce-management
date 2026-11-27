@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Business;
 use App\Models\Shift;
 use App\Models\Staff;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ShiftApiTest extends TestCase
@@ -17,6 +19,7 @@ class ShiftApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
 
         $this->business = Business::factory()->create();
     }
