@@ -18,6 +18,9 @@ class Staff {
     this.overtimeCustomType,
     this.overtimeCustomRate,
     this.overtimeLabel = 'Not eligible',
+    this.dailyHourLimit,
+    this.weeklyHourLimit,
+    this.monthlyHourLimit,
     required this.currency,
     required this.status,
     this.profilePhotoUrl,
@@ -43,6 +46,9 @@ class Staff {
       overtimeCustomType: json['overtime_custom_type'] as String?,
       overtimeCustomRate: json['overtime_custom_rate'] as String?,
       overtimeLabel: json['overtime_label'] as String? ?? 'Not eligible',
+      dailyHourLimit: json['daily_hour_limit'] as String?,
+      weeklyHourLimit: json['weekly_hour_limit'] as String?,
+      monthlyHourLimit: json['monthly_hour_limit'] as String?,
       currency: json['currency'] as String,
       status: json['status'] as String,
       profilePhotoUrl: json['profile_photo'] as String?,
@@ -69,6 +75,9 @@ class Staff {
   final String? overtimeCustomType;
   final String? overtimeCustomRate;
   final String overtimeLabel;
+  final String? dailyHourLimit;
+  final String? weeklyHourLimit;
+  final String? monthlyHourLimit;
   final String currency;
   final String status;
   final String? profilePhotoUrl;

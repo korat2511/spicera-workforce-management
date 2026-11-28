@@ -10,6 +10,10 @@ class DateTimeUtils {
   static String formatWeekdayShort(DateTime dateTime) =>
       DateFormat('EEE').format(dateTime).toUpperCase();
 
+  /// Formats a date as "November 2026".
+  static String formatMonthYear(DateTime dateTime) =>
+      DateFormat('MMMM yyyy').format(dateTime);
+
   static String formatTime(DateTime dateTime) =>
       DateFormat('h:mm a').format(dateTime);
 

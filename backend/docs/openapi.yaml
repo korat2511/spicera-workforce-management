@@ -419,8 +419,11 @@ components:
         employment_type: { type: string, enum: [Full-time, Part-time, Casual, Other] }
         job_title: { type: string, nullable: true }
         joining_date: { type: string, format: date }
-        salary_type: { type: string, enum: [Monthly, Daily, Hourly] }
+        salary_type: { type: string, enum: [Monthly, Weekly, Daily, Hourly] }
         salary_rate: { type: string, example: "28.50" }
+        daily_hour_limit: { type: string, nullable: true, example: "8.00", description: "Hours/day before overtime applies" }
+        weekly_hour_limit: { type: string, nullable: true, example: "38.00", description: "Hours/week before overtime applies" }
+        monthly_hour_limit: { type: string, nullable: true, example: "176.00", description: "Hours/month before overtime applies" }
         currency: { type: string, example: AUD }
         status: { type: string, enum: [active, inactive] }
         profile_photo: { type: string, nullable: true }
@@ -504,8 +507,11 @@ components:
         employment_type: { type: string, enum: [Full-time, Part-time, Casual, Other] }
         job_title: { type: string, nullable: true }
         joining_date: { type: string, format: date }
-        salary_type: { type: string, enum: [Monthly, Daily, Hourly] }
+        salary_type: { type: string, enum: [Monthly, Weekly, Daily, Hourly] }
         salary_rate: { type: number, format: float, example: 28.50 }
+        daily_hour_limit: { type: number, format: float, nullable: true, example: 8.0, description: "Hours/day before overtime applies (max 24)" }
+        weekly_hour_limit: { type: number, format: float, nullable: true, example: 38.0, description: "Hours/week before overtime applies (max 168)" }
+        monthly_hour_limit: { type: number, format: float, nullable: true, example: 176.0, description: "Hours/month before overtime applies (max 744)" }
         notes: { type: string, nullable: true }
         profile_photo: { type: string, format: binary, nullable: true }
 

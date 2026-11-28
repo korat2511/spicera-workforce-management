@@ -224,6 +224,39 @@ class StaffApiTest extends TestCase
         ]);
     }
 
+    public function test_it_creates_a_staff_member_with_a_weekly_salary_type(): void
+    {
+        $payload = $this->validStaffPayload(['salary_type' => 'Weekly']);
+
+        $this->postJson('/api/v1/staff', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.salary_type', 'Weekly');
+    }
+
+    public function test_it_stores_daily_weekly_and_monthly_hour_limits(): void
+    {
+        $payload = $this->validStaffPayload([
+            'daily_hour_limit' => 8,
+            'weekly_hour_limit' => 38,
+            'monthly_hour_limit' => 176,
+        ]);
+
+        $this->postJson('/api/v1/staff', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.daily_hour_limit', '8.00')
+            ->assertJsonPath('data.weekly_hour_limit', '38.00')
+            ->assertJsonPath('data.monthly_hour_limit', '176.00');
+    }
+
+    public function test_it_rejects_an_hour_limit_exceeding_its_maximum(): void
+    {
+        $payload = $this->validStaffPayload(['daily_hour_limit' => 25]);
+
+        $this->postJson('/api/v1/staff', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['daily_hour_limit']);
+    }
+
     public function test_it_fully_replaces_a_staff_member_with_put(): void
     {
         $staff = Staff::factory()->for($this->business)->create();
@@ -279,6 +312,100 @@ class StaffApiTest extends TestCase
             ->assertJsonMissingPath('data.pin');
 
         $this->assertTrue(Hash::check('123456', $staff->fresh()->pin_hash));
+    }
+
+    public function test_it_clears_a_staff_pin_when_pin_is_omitted(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [])
+            ->assertOk()
+            ->assertJsonPath('data.pin_set', false);
+
+        $this->assertNull($staff->fresh()->pin_hash);
+    }
+
+    public function test_it_changes_a_staff_pin_when_the_current_pin_matches(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '654321',
+            'pin_confirmation' => '654321',
+            'current_pin' => '123456',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.pin_set', true);
+
+        $this->assertTrue(Hash::check('654321', $staff->fresh()->pin_hash));
+    }
+
+    public function test_it_rejects_changing_a_staff_pin_with_the_wrong_current_pin(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '654321',
+            'pin_confirmation' => '654321',
+            'current_pin' => '000000',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['current_pin']);
+
+        $this->assertTrue(Hash::check('123456', $staff->fresh()->pin_hash));
+    }
+
+    public function test_it_rejects_changing_a_staff_pin_when_current_pin_is_missing(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '654321',
+            'pin_confirmation' => '654321',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['current_pin']);
+
+        $this->assertTrue(Hash::check('123456', $staff->fresh()->pin_hash));
+    }
+
+    public function test_it_does_not_require_a_current_pin_when_setting_a_pin_for_the_first_time(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ])->assertOk();
+    }
+
+    public function test_it_verifies_a_correct_pin_without_changing_it(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->postJson("/api/v1/staff/{$staff->id}/pin/verify", ['pin' => '123456'])
+            ->assertOk()
+            ->assertJsonPath('data.matches', true);
+
+        $this->assertTrue(Hash::check('123456', $staff->fresh()->pin_hash));
+    }
+
+    public function test_it_reports_an_incorrect_pin_as_not_matching(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create(['pin_hash' => Hash::make('123456')]);
+
+        $this->postJson("/api/v1/staff/{$staff->id}/pin/verify", ['pin' => '000000'])
+            ->assertOk()
+            ->assertJsonPath('data.matches', false);
+    }
+
+    public function test_it_reports_no_match_when_staff_has_no_pin_set(): void
+    {
+        $staff = Staff::factory()->for($this->business)->create();
+
+        $this->postJson("/api/v1/staff/{$staff->id}/pin/verify", ['pin' => '123456'])
+            ->assertOk()
+            ->assertJsonPath('data.matches', false);
     }
 
     public function test_it_rejects_a_pin_confirmation_mismatch(): void
@@ -339,6 +466,7 @@ class StaffApiTest extends TestCase
         $this->patchJson("/api/v1/staff/{$staff->id}/pin", [
             'pin' => '123456',
             'pin_confirmation' => '123456',
+            'current_pin' => '123456',
         ])->assertOk();
     }
 

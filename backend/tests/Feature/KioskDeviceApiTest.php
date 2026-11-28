@@ -104,6 +104,45 @@ class KioskDeviceApiTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_it_permanently_deletes_a_revoked_kiosk_device(): void
+    {
+        $business = Business::factory()->create();
+        $device = KioskDevice::factory()->for($business)->create(['revoked_at' => now()]);
+
+        Sanctum::actingAs(User::factory()->for($business)->create());
+
+        $this->deleteJson("/api/v1/kiosk-devices/{$device->id}/force")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('kiosk_devices', ['id' => $device->id]);
+    }
+
+    public function test_it_rejects_deleting_a_device_that_has_not_been_revoked(): void
+    {
+        $business = Business::factory()->create();
+        $device = KioskDevice::factory()->for($business)->create(['revoked_at' => null]);
+
+        Sanctum::actingAs(User::factory()->for($business)->create());
+
+        $this->deleteJson("/api/v1/kiosk-devices/{$device->id}/force")
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('kiosk_devices', ['id' => $device->id]);
+    }
+
+    public function test_it_cannot_delete_a_device_belonging_to_another_business(): void
+    {
+        $businessA = Business::factory()->create();
+        $businessB = Business::factory()->create();
+        $device = KioskDevice::factory()->for($businessB)->create(['revoked_at' => now()]);
+
+        Sanctum::actingAs(User::factory()->for($businessA)->create());
+
+        $this->deleteJson("/api/v1/kiosk-devices/{$device->id}/force")
+            ->assertNotFound();
+    }
+
     public function test_kiosk_device_token_round_trips_through_hash_and_lookup(): void
     {
         $business = Business::factory()->create();

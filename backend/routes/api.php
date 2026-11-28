@@ -33,6 +33,7 @@ Route::prefix('v1')->group(function (): void {
             Route::match(['put', 'patch'], '/{id}', [StaffController::class, 'update']);
             Route::patch('/{id}/status', [StaffController::class, 'changeStatus']);
             Route::patch('/{id}/pin', [StaffController::class, 'setPin']);
+            Route::post('/{id}/pin/verify', [StaffController::class, 'verifyPin']);
             Route::patch('/{id}/shift', [StaffController::class, 'assignShift']);
         });
 
@@ -49,6 +50,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/', [KioskDeviceController::class, 'index']);
             Route::post('/', [KioskDeviceController::class, 'store']);
             Route::delete('/{id}', [KioskDeviceController::class, 'destroy']);
+            Route::delete('/{id}/force', [KioskDeviceController::class, 'forceDestroy']);
         });
 
         Route::get('/attendance', [AttendanceController::class, 'index']);

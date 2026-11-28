@@ -31,4 +31,10 @@ class KioskDeviceApiService {
   Future<void> revoke(int deviceId) async {
     await ApiClient.delete('/kiosk-devices/$deviceId');
   }
+
+  /// Permanently deletes a device's record. The backend only allows this
+  /// once the device has already been revoked.
+  Future<void> delete(int deviceId) async {
+    await ApiClient.delete('/kiosk-devices/$deviceId/force');
+  }
 }

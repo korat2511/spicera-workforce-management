@@ -9,6 +9,7 @@ use App\Models\KioskDevice;
 use App\Support\ApiResponse;
 use App\Support\BusinessContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class KioskDeviceController extends Controller
 {
@@ -53,5 +54,25 @@ class KioskDeviceController extends Controller
         $device->update(['revoked_at' => now()]);
 
         return ApiResponse::success(null, 'Kiosk device revoked successfully');
+    }
+
+    /**
+     * Permanently removes a device's record. Only allowed once the device
+     * has already been revoked — an active device must be revoked first.
+     */
+    public function forceDestroy(int $id): JsonResponse
+    {
+        $business = BusinessContext::resolve();
+        $device = KioskDevice::where('business_id', $business->id)->findOrFail($id);
+
+        if ($device->revoked_at === null) {
+            throw ValidationException::withMessages([
+                'device' => ['Revoke this device before deleting it.'],
+            ]);
+        }
+
+        $device->delete();
+
+        return ApiResponse::success(null, 'Kiosk device deleted successfully');
     }
 }

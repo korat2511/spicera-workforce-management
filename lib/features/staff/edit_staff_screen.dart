@@ -24,7 +24,7 @@ class EditStaffScreen extends StatefulWidget {
 
 class _EditStaffScreenState extends State<EditStaffScreen> {
   static const _employmentTypes = ['Full-time', 'Part-time', 'Casual', 'Other'];
-  static const _salaryTypes = ['Monthly', 'Daily', 'Hourly'];
+  static const _salaryTypes = ['Monthly', 'Weekly', 'Daily', 'Hourly'];
   static const _overtimeRateTypeKeys = ['not_eligible', '1x', '1.5x', '2x', 'custom'];
   static const _overtimeRateTypeLabels = ['Not Eligible', '1x', '1.5x', '2x', 'Custom'];
 
@@ -48,6 +48,15 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
   );
   late final _overtimeCustomRateController = TextEditingController(
     text: widget.staff.overtimeCustomRate ?? '',
+  );
+  late final _dailyHourLimitController = TextEditingController(
+    text: widget.staff.dailyHourLimit ?? '',
+  );
+  late final _weeklyHourLimitController = TextEditingController(
+    text: widget.staff.weeklyHourLimit ?? '',
+  );
+  late final _monthlyHourLimitController = TextEditingController(
+    text: widget.staff.monthlyHourLimit ?? '',
   );
 
   late DateTime _joiningDate = DateTime.parse(widget.staff.joiningDate);
@@ -77,6 +86,9 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
     _jobTitleController.dispose();
     _salaryRateController.dispose();
     _overtimeCustomRateController.dispose();
+    _dailyHourLimitController.dispose();
+    _weeklyHourLimitController.dispose();
+    _monthlyHourLimitController.dispose();
     super.dispose();
   }
 
@@ -170,6 +182,39 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
     return null;
   }
 
+  String? _validateDailyHourLimit(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    final parsed = double.tryParse(value.trim());
+    if (parsed == null || parsed < 0 || parsed > 24) {
+      return 'Enter hours between 0 and 24';
+    }
+    return null;
+  }
+
+  String? _validateWeeklyHourLimit(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    final parsed = double.tryParse(value.trim());
+    if (parsed == null || parsed < 0 || parsed > 168) {
+      return 'Enter hours between 0 and 168';
+    }
+    return null;
+  }
+
+  String? _validateMonthlyHourLimit(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    final parsed = double.tryParse(value.trim());
+    if (parsed == null || parsed < 0 || parsed > 744) {
+      return 'Enter hours between 0 and 744';
+    }
+    return null;
+  }
+
   Future<void> _handleSave() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -196,6 +241,19 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
             : null,
         overtimeCustomRate: _overtimeRateType == 'custom'
             ? double.parse(_overtimeCustomRateController.text.trim())
+            : null,
+        dailyHourLimit: _dailyHourLimitController.text.trim().isEmpty
+            ? null
+            : double.parse(_dailyHourLimitController.text.trim()),
+        weeklyHourLimit:
+            _salaryType == 'Weekly' &&
+                _weeklyHourLimitController.text.trim().isNotEmpty
+            ? double.parse(_weeklyHourLimitController.text.trim())
+            : null,
+        monthlyHourLimit:
+            _salaryType == 'Monthly' &&
+                _monthlyHourLimitController.text.trim().isNotEmpty
+            ? double.parse(_monthlyHourLimitController.text.trim())
             : null,
         email: _emailController.text.trim(),
         jobTitle: _jobTitleController.text.trim(),
@@ -407,6 +465,50 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
                     ),
                   ),
                 ],
+                const SizedBox(height: AppSpacing.lg),
+                _fieldRow(context, [
+                  _labeledField(
+                    label: 'Daily Hour Limit',
+                    helper: 'Hours/day before overtime applies',
+                    field: TextFormField(
+                      controller: _dailyHourLimitController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      autocorrect: false,
+                      validator: _validateDailyHourLimit,
+                      decoration: const InputDecoration(suffixText: 'hrs'),
+                    ),
+                  ),
+                  if (_salaryType == 'Weekly')
+                    _labeledField(
+                      label: 'Weekly Hour Limit',
+                      helper: 'Hours/week before overtime applies',
+                      field: TextFormField(
+                        controller: _weeklyHourLimitController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        autocorrect: false,
+                        validator: _validateWeeklyHourLimit,
+                        decoration: const InputDecoration(suffixText: 'hrs'),
+                      ),
+                    )
+                  else if (_salaryType == 'Monthly')
+                    _labeledField(
+                      label: 'Monthly Hour Limit',
+                      helper: 'Hours/month before overtime applies',
+                      field: TextFormField(
+                        controller: _monthlyHourLimitController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        autocorrect: false,
+                        validator: _validateMonthlyHourLimit,
+                        decoration: const InputDecoration(suffixText: 'hrs'),
+                      ),
+                    ),
+                ]),
               ],
             ),
           ],

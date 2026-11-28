@@ -2,12 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * @property \App\Models\Staff $resource
+ * @property Staff $resource
  */
 class StaffResource extends JsonResource
 {
@@ -41,6 +42,9 @@ class StaffResource extends JsonResource
             'overtime_custom_type' => $this->overtime_custom_type,
             'overtime_custom_rate' => $this->overtime_custom_rate !== null ? (string) $this->overtime_custom_rate : null,
             'overtime_label' => $this->overtime_label,
+            'daily_hour_limit' => $this->daily_hour_limit !== null ? (string) $this->daily_hour_limit : null,
+            'weekly_hour_limit' => $this->weekly_hour_limit !== null ? (string) $this->weekly_hour_limit : null,
+            'monthly_hour_limit' => $this->monthly_hour_limit !== null ? (string) $this->monthly_hour_limit : null,
             'currency' => $this->business?->currency,
             'status' => $this->status,
             'profile_photo' => $this->profile_photo ? Storage::url($this->profile_photo) : null,

@@ -86,14 +86,43 @@ class StaffService
         return $staff->fresh(['business', 'shift']);
     }
 
-    public function setPin(Staff $staff, string $pin): Staff
+    public function setPin(Staff $staff, ?string $pin, ?string $currentPin = null): Staff
     {
+        if ($pin === null) {
+            $staff->pin_hash = null;
+            $staff->save();
+
+            return $staff->fresh(['business', 'shift']);
+        }
+
+        if ($staff->pin_hash !== null) {
+            $this->assertCurrentPinMatches($staff, $currentPin);
+        }
+
         $this->assertPinNotInUseByAnotherStaffMember($staff, $pin);
 
         $staff->pin_hash = Hash::make($pin);
         $staff->save();
 
         return $staff->fresh(['business', 'shift']);
+    }
+
+    public function verifyPin(Staff $staff, string $pin): bool
+    {
+        return $staff->pin_hash !== null && Hash::check($pin, $staff->pin_hash);
+    }
+
+    /**
+     * Required whenever a staff member already has a PIN and is changing it
+     * to a new one — not required the first time a PIN is set.
+     */
+    private function assertCurrentPinMatches(Staff $staff, ?string $currentPin): void
+    {
+        if ($currentPin === null || ! Hash::check($currentPin, $staff->pin_hash)) {
+            throw ValidationException::withMessages([
+                'current_pin' => ['The current PIN is incorrect.'],
+            ]);
+        }
     }
 
     /**

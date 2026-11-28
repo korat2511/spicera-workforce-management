@@ -128,6 +128,48 @@ class _KioskDevicesScreenState extends State<KioskDevicesScreen> {
     }
   }
 
+  Future<void> _delete(KioskDevice device) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Device',
+          style: AppTypography.headlineSm(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Permanently delete "${device.name}"? This cannot be undone.',
+          style: AppTypography.bodyMd(color: AppColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.onPrimary,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _apiService.delete(device.id);
+      if (!mounted) return;
+      SnackbarUtils.showSuccess(context, '${device.name} deleted');
+      _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      SnackbarUtils.showError(context, e.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPaired = kioskDeviceController.isPaired;
@@ -177,7 +219,12 @@ class _KioskDevicesScreenState extends State<KioskDevicesScreen> {
             )
           else
             for (final device in _devices) ...[
-              _KioskDeviceRow(device: device, onUnpair: () => _unpair(device)),
+              _KioskDeviceRow(
+                device: device,
+                isThisDevice: device.id == kioskDeviceController.pairedDeviceId,
+                onUnpair: () => _unpair(device),
+                onDelete: () => _delete(device),
+              ),
               if (device != _devices.last)
                 const SizedBox(height: AppSpacing.sm),
             ],
@@ -188,10 +235,17 @@ class _KioskDevicesScreenState extends State<KioskDevicesScreen> {
 }
 
 class _KioskDeviceRow extends StatelessWidget {
-  const _KioskDeviceRow({required this.device, required this.onUnpair});
+  const _KioskDeviceRow({
+    required this.device,
+    required this.isThisDevice,
+    required this.onUnpair,
+    required this.onDelete,
+  });
 
   final KioskDevice device;
+  final bool isThisDevice;
   final VoidCallback onUnpair;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +259,7 @@ class _KioskDeviceRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
                 device.platform == 'iOS'
@@ -213,6 +267,7 @@ class _KioskDeviceRow extends StatelessWidget {
                     : device.platform == 'Android'
                     ? Icons.phone_android
                     : Icons.tablet_mac,
+                size: 35,
                 color: AppColors.textSecondary,
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -220,14 +275,26 @@ class _KioskDeviceRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      device.name,
-                      style: AppTypography.titleMd(
-                        color: AppColors.textPrimary,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            device.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.titleMd(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (isThisDevice) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          const _ThisDeviceBadge(),
+                        ],
+                      ],
                     ),
                     if (device.model != null) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 10),
                       Text(
                         device.model!,
                         style: AppTypography.bodySm(color: AppColors.textMuted),
@@ -238,6 +305,21 @@ class _KioskDeviceRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               _StatusBadge(isRevoked: device.isRevoked),
+              if (device.isRevoked) ...[
+                const SizedBox(width: AppSpacing.xs),
+                InkWell(
+                  onTap: onDelete,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  child: const Padding(
+                    padding: EdgeInsets.all(AppSpacing.xs),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -313,6 +395,29 @@ class _StatusBadge extends StatelessWidget {
         style: AppTypography.labelMd(
           color: isRevoked ? AppColors.onErrorContainer : AppColors.onDutyText,
         ),
+      ),
+    );
+  }
+}
+
+class _ThisDeviceBadge extends StatelessWidget {
+  const _ThisDeviceBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryButtonBackground,
+        border: Border.all(color: AppColors.secondaryButtonBorder),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: Text(
+        'This Device',
+        style: AppTypography.labelMd(color: AppColors.secondaryButtonText),
       ),
     );
   }

@@ -2,12 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\Models\AttendanceRecord;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * @property \App\Models\AttendanceRecord $resource
+ * @property AttendanceRecord $resource
  */
 class AttendanceRecordResource extends JsonResource
 {
@@ -23,7 +24,7 @@ class AttendanceRecordResource extends JsonResource
             'type' => $this->type,
             'recorded_at' => $this->recorded_at?->toIso8601String(),
             'status' => $this->status,
-            'photo_url' => $this->photo_path ? Storage::url($this->photo_path) : null,
+            'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
             'staff' => [
                 'id' => $this->staff->id,
                 'staff_code' => $this->staff->staff_code,

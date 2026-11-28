@@ -24,6 +24,7 @@ class AttendanceApiService {
   Future<List<AttendanceRecord>> list({
     String? search,
     String? status,
+    int? staffId,
     DateTime? dateFrom,
     DateTime? dateTo,
     int perPage = 100,
@@ -32,6 +33,7 @@ class AttendanceApiService {
       'per_page': '$perPage',
       if (search != null && search.isNotEmpty) 'search': search,
       'status': ?status,
+      if (staffId != null) 'staff_id': '$staffId',
       if (dateFrom != null) 'date_from': DateTimeUtils.toApiDate(dateFrom),
       if (dateTo != null) 'date_to': DateTimeUtils.toApiDate(dateTo),
     };

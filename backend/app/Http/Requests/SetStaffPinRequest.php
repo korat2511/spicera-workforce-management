@@ -26,7 +26,8 @@ class SetStaffPinRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'pin' => ['required', 'digits:6', 'confirmed'],
+            'pin' => ['nullable', 'digits:6', 'confirmed'],
+            'current_pin' => ['nullable', 'digits:6'],
         ];
     }
 }

@@ -46,6 +46,9 @@ class StaffApiService {
     String overtimeRateType = 'not_eligible',
     String? overtimeCustomType,
     double? overtimeCustomRate,
+    double? dailyHourLimit,
+    double? weeklyHourLimit,
+    double? monthlyHourLimit,
     String? email,
     DateTime? dateOfBirth,
     String? gender,
@@ -69,6 +72,12 @@ class StaffApiService {
       'overtime_custom_type': ?overtimeCustomType,
       if (overtimeCustomRate != null)
         'overtime_custom_rate': overtimeCustomRate.toStringAsFixed(2),
+      if (dailyHourLimit != null)
+        'daily_hour_limit': dailyHourLimit.toStringAsFixed(2),
+      if (weeklyHourLimit != null)
+        'weekly_hour_limit': weeklyHourLimit.toStringAsFixed(2),
+      if (monthlyHourLimit != null)
+        'monthly_hour_limit': monthlyHourLimit.toStringAsFixed(2),
       if (email != null && email.isNotEmpty) 'email': email,
       if (dateOfBirth != null)
         'date_of_birth': DateTimeUtils.toApiDate(dateOfBirth),
@@ -103,6 +112,9 @@ class StaffApiService {
     String overtimeRateType = 'not_eligible',
     String? overtimeCustomType,
     double? overtimeCustomRate,
+    double? dailyHourLimit,
+    double? weeklyHourLimit,
+    double? monthlyHourLimit,
     String? email,
     String? jobTitle,
   }) async {
@@ -118,6 +130,12 @@ class StaffApiService {
       'overtime_custom_type': ?overtimeCustomType,
       if (overtimeCustomRate != null)
         'overtime_custom_rate': overtimeCustomRate.toStringAsFixed(2),
+      if (dailyHourLimit != null)
+        'daily_hour_limit': dailyHourLimit.toStringAsFixed(2),
+      if (weeklyHourLimit != null)
+        'weekly_hour_limit': weeklyHourLimit.toStringAsFixed(2),
+      if (monthlyHourLimit != null)
+        'monthly_hour_limit': monthlyHourLimit.toStringAsFixed(2),
       if (email != null && email.isNotEmpty) 'email': email,
       if (jobTitle != null && jobTitle.isNotEmpty) 'job_title': jobTitle,
     };
@@ -130,17 +148,37 @@ class StaffApiService {
     return Staff.fromJson(response['data'] as Map<String, dynamic>);
   }
 
+  /// Sets, changes, or (when [pin] is omitted) clears the staff member's
+  /// attendance PIN. [currentPin] is required by the backend whenever the
+  /// staff member already has a PIN and [pin] is being changed to a new one.
   Future<Staff> setPin({
     required int staffId,
-    required String pin,
-    required String pinConfirmation,
+    String? pin,
+    String? pinConfirmation,
+    String? currentPin,
   }) async {
     final response = await ApiClient.patchJson(
       path: '/staff/$staffId/pin',
-      body: {'pin': pin, 'pin_confirmation': pinConfirmation},
+      body: {
+        'pin': ?pin,
+        'pin_confirmation': ?pinConfirmation,
+        'current_pin': ?currentPin,
+      },
     );
 
     return Staff.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  /// Checks [pin] against the staff member's current PIN without changing
+  /// it — used to validate a "current PIN" step before collecting a new one.
+  Future<bool> verifyPin({required int staffId, required String pin}) async {
+    final response = await ApiClient.postJson(
+      path: '/staff/$staffId/pin/verify',
+      body: {'pin': pin},
+    );
+
+    final data = response['data'] as Map<String, dynamic>;
+    return data['matches'] as bool;
   }
 
   Future<Staff> changeStatus({

@@ -7,6 +7,7 @@ import '../../core/constants/app_typography.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/date_time_utils.dart';
 import '../../core/utils/responsive_utils.dart';
+import '../staff/data/shift_model.dart';
 import '../staff/data/staff_api_service.dart';
 import '../staff/data/staff_model.dart';
 import 'data/attendance_api_service.dart';
@@ -422,7 +423,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     var rows = _activeStaff
         .map(
           (staff) => _RosterRow(
-            staff: staff,
+            name: staff.fullName,
+            code: staff.staffCode,
+            shift: staff.shift,
             checkIn: _findRecord(staff.staffCode, true),
             checkOut: _findRecord(staff.staffCode, false),
           ),
@@ -495,24 +498,48 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       children: [
         for (final entry in grouped.entries) ...[
           Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(
               entry.key,
               style: AppTypography.labelLg(color: AppColors.textMuted),
             ),
           ),
-          for (final record in entry.value)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: _AttendanceCard(
-                record: record,
-                onViewPhoto: _viewPhoto,
-              ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+            child: _RosterTable(
+              rows: _pairRecordsByStaff(entry.value),
+              onViewPhoto: _viewPhoto,
             ),
-          const SizedBox(height: AppSpacing.xs),
+          ),
         ],
       ],
     );
+  }
+
+  /// Pairs same-day check-in/check-out punches per staff member into roster
+  /// rows, matching the table layout the Today view already uses.
+  List<_RosterRow> _pairRecordsByStaff(List<AttendanceRecord> records) {
+    final byStaffCode = <String, List<AttendanceRecord>>{};
+    for (final record in records) {
+      byStaffCode.putIfAbsent(record.staffCode, () => []).add(record);
+    }
+
+    AttendanceRecord? firstOfType(List<AttendanceRecord> records, bool isCheckIn) {
+      for (final record in records) {
+        if (record.isCheckIn == isCheckIn) return record;
+      }
+      return null;
+    }
+
+    return byStaffCode.values.map((staffRecords) {
+      final first = staffRecords.first;
+      return _RosterRow(
+        name: first.staffFullName,
+        code: first.staffCode,
+        checkIn: firstOfType(staffRecords, true),
+        checkOut: firstOfType(staffRecords, false),
+      );
+    }).toList();
   }
 
   String _dateHeaderLabel(DateTime date) {
@@ -644,132 +671,6 @@ class _DateChip extends StatelessWidget {
   }
 }
 
-class _AttendanceCard extends StatelessWidget {
-  const _AttendanceCard({required this.record, required this.onViewPhoto});
-
-  final AttendanceRecord record;
-  final ValueChanged<String> onViewPhoto;
-
-  String _initialsFor(String fullName) {
-    final words = fullName.trim().split(RegExp(r'\s+'));
-    final letters = words.where((w) => w.isNotEmpty).map((w) => w[0]).take(2);
-    final initials = letters.join();
-    return initials.isEmpty ? '?' : initials.toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitle = [
-      record.staffCode,
-      if (record.shiftName != null) record.shiftName!,
-    ].join(' • ');
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppRadius.base),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceHighlight,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              _initialsFor(record.staffFullName),
-              style: AppTypography.labelSm(color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  record.staffFullName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelMd(color: AppColors.textPrimary),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelSm(color: AppColors.textMuted),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          _TypeBadge(isCheckIn: record.isCheckIn),
-          const SizedBox(width: AppSpacing.xs),
-          SizedBox(
-            width: 60,
-            child: Text(
-              DateTimeUtils.formatTime(record.recordedAt.toLocal()),
-              textAlign: TextAlign.right,
-              style: AppTypography.labelSm(color: AppColors.textSecondary),
-            ),
-          ),
-          if (record.status != null) ...[
-            const SizedBox(width: AppSpacing.xs),
-            _StatusChip(status: record.status!),
-          ],
-          if (record.photoUrl != null) ...[
-            const SizedBox(width: AppSpacing.xs),
-            GestureDetector(
-              onTap: () => onViewPhoto(record.photoUrl!),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.base),
-                child: Image.network(
-                  record.photoUrl!,
-                  width: 28,
-                  height: 28,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 28,
-                    height: 28,
-                    color: AppColors.surfaceInput,
-                    child: const Icon(
-                      Icons.broken_image_outlined,
-                      size: 14,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TypeBadge extends StatelessWidget {
-  const _TypeBadge({required this.isCheckIn});
-
-  final bool isCheckIn;
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(
-      isCheckIn ? Icons.login : Icons.logout,
-      size: 16,
-      color: isCheckIn ? AppColors.onDutyText : AppColors.offDutyText,
-    );
-  }
-}
 
 class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.status, this.duration});
@@ -823,9 +724,22 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _RosterRow {
-  const _RosterRow({required this.staff, this.checkIn, this.checkOut});
+  const _RosterRow({
+    required this.name,
+    required this.code,
+    this.shift,
+    this.checkIn,
+    this.checkOut,
+  });
 
-  final Staff staff;
+  final String name;
+  final String code;
+
+  /// Only available when the row is built from the live staff roster
+  /// (Today view). Search results don't carry shift timing, so this is
+  /// null there and [durationLabel] always returns null.
+  final Shift? shift;
+
   final AttendanceRecord? checkIn;
   final AttendanceRecord? checkOut;
 
@@ -839,10 +753,10 @@ class _RosterRow {
   }
 
   /// How late/early/over the staff member is, e.g. "15m" or "1h 20m".
-  /// Null when the status doesn't carry a duration or the staff member
-  /// has no assigned shift to measure against.
+  /// Null when the status doesn't carry a duration or there's no assigned
+  /// shift to measure against.
   String? get durationLabel {
-    final shift = staff.shift;
+    final shift = this.shift;
     if (shift == null) return null;
 
     switch (status) {
@@ -863,6 +777,17 @@ class _RosterRow {
       default:
         return null;
     }
+  }
+
+  /// How many calendar days after check-in the check-out landed on, e.g. 1
+  /// for an overnight shift that clocks out after midnight. Null when there
+  /// isn't a check-in/check-out pair or they fall on the same day.
+  int? get checkOutDayOffset {
+    if (checkIn == null || checkOut == null) return null;
+    final inDate = _dateOnly(checkIn!.recordedAt.toLocal());
+    final outDate = _dateOnly(checkOut!.recordedAt.toLocal());
+    final offset = outDate.difference(inDate).inDays;
+    return offset > 0 ? offset : null;
   }
 }
 
@@ -982,7 +907,6 @@ class _RosterTableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final staff = row.staff;
     final photoUrl = row.checkOut?.photoUrl ?? row.checkIn?.photoUrl;
 
     return Container(
@@ -1010,7 +934,7 @@ class _RosterTableRow extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    _initialsFor(staff.fullName),
+                    _initialsFor(row.name),
                     style: AppTypography.labelMd(color: AppColors.primary),
                   ),
                 ),
@@ -1021,7 +945,7 @@ class _RosterTableRow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        staff.fullName,
+                        row.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.titleMd(
@@ -1029,7 +953,7 @@ class _RosterTableRow extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        staff.staffCode,
+                        row.code,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.labelMd(
@@ -1076,18 +1000,34 @@ class _RosterTableRow extends StatelessWidget {
           Expanded(
             flex: _rosterTimeFlex,
             child: Center(
-              child: Text(
-                row.checkOut == null
-                    ? '—'
-                    : DateTimeUtils.formatTime(
-                        row.checkOut!.recordedAt.toLocal(),
+              child: row.checkOut == null
+                  ? Text(
+                      '—',
+                      style: AppTypography.labelLg(
+                        color: AppColors.textMuted,
                       ),
-                style: AppTypography.labelLg(
-                  color: row.checkOut == null
-                      ? AppColors.textMuted
-                      : AppColors.textPrimary,
-                ),
-              ),
+                    )
+                  : RichText(
+                      text: TextSpan(
+                        style: AppTypography.labelLg(
+                          color: AppColors.textPrimary,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: DateTimeUtils.formatTime(
+                              row.checkOut!.recordedAt.toLocal(),
+                            ),
+                          ),
+                          if (row.checkOutDayOffset != null)
+                            TextSpan(
+                              text: ' (+${row.checkOutDayOffset})',
+                              style: AppTypography.labelSm(
+                                color: AppColors.breakText,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: _rosterMidGap),

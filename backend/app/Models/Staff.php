@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\StaffFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Staff extends Model
 {
-    /** @use HasFactory<\Database\Factories\StaffFactory> */
+    /** @use HasFactory<StaffFactory> */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -34,6 +35,9 @@ class Staff extends Model
         'overtime_rate_type',
         'overtime_custom_type',
         'overtime_custom_rate',
+        'daily_hour_limit',
+        'weekly_hour_limit',
+        'monthly_hour_limit',
         'status',
         'profile_photo',
         'notes',
@@ -54,6 +58,9 @@ class Staff extends Model
             'joining_date' => 'date',
             'salary_rate' => 'decimal:2',
             'overtime_custom_rate' => 'decimal:2',
+            'daily_hour_limit' => 'decimal:2',
+            'weekly_hour_limit' => 'decimal:2',
+            'monthly_hour_limit' => 'decimal:2',
         ];
     }
 

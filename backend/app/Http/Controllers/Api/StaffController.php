@@ -8,6 +8,7 @@ use App\Http\Requests\ChangeStaffStatusRequest;
 use App\Http\Requests\SetStaffPinRequest;
 use App\Http\Requests\StoreStaffRequest;
 use App\Http\Requests\UpdateStaffRequest;
+use App\Http\Requests\VerifyStaffPinRequest;
 use App\Http\Resources\StaffResource;
 use App\Services\StaffService;
 use App\Support\ApiResponse;
@@ -71,9 +72,22 @@ class StaffController extends Controller
     {
         $business = BusinessContext::resolve();
         $staff = $this->staffService->find($business, $id);
-        $staff = $this->staffService->setPin($staff, $request->validated('pin'));
+        $pin = $request->validated('pin');
+        $currentPin = $request->validated('current_pin');
+        $staff = $this->staffService->setPin($staff, $pin, $currentPin);
 
-        return ApiResponse::success(new StaffResource($staff), 'Staff PIN set successfully');
+        $message = $pin === null ? 'Staff PIN reset successfully' : 'Staff PIN set successfully';
+
+        return ApiResponse::success(new StaffResource($staff), $message);
+    }
+
+    public function verifyPin(VerifyStaffPinRequest $request, int $id): JsonResponse
+    {
+        $business = BusinessContext::resolve();
+        $staff = $this->staffService->find($business, $id);
+        $matches = $this->staffService->verifyPin($staff, $request->validated('pin'));
+
+        return ApiResponse::success(['matches' => $matches], 'PIN verification complete');
     }
 
     public function assignShift(AssignStaffShiftRequest $request, int $id): JsonResponse
